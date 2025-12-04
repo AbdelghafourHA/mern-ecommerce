@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #33333a;
+  --color-secondary: #ff9292;
+  --color-accent: #f0c38e;
+  --color-background: #eeeeee;
+
+  --font-p01: "Zodiak", serif;
+  --font-bold02: "Comico", cursive;
+  --font-bold01: "Quilon", sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-primary font-p01;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-bold01);
+  }
+  p {
+    font-family: var(--font-p01);
+    color: #4a5565;
+  }
+  .costum-section {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8;
+  }
+}
