@@ -1,6 +1,14 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Filter, X, ShoppingCart, ArrowUp, ArrowDown } from "lucide-react";
+import {
+  Filter,
+  X,
+  ShoppingCart,
+  ArrowUp,
+  ArrowDown,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import Footer from "../components/Footer";
 import { Link } from "react-router-dom";
 import { useProductStore } from "../stores/useProductStore";
@@ -12,6 +20,8 @@ const Products = () => {
   const [selectedGenders, setSelectedGenders] = useState([]);
   const [priceRange, setPriceRange] = useState([0, 50000]);
   const [priceSort, setPriceSort] = useState("none");
+  const [currentPage, setCurrentPage] = useState(1);
+  const productsPerPage = 10;
 
   const { products, getAllProducts, loading } = useProductStore();
 
@@ -108,6 +118,17 @@ const Products = () => {
 
     return filtered;
   }, [products, selectedCategories, selectedGenders, priceRange, priceSort]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+  const startIndex = (currentPage - 1) * productsPerPage;
+  const endIndex = startIndex + productsPerPage;
+  const currentProducts = filteredProducts.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategories, selectedGenders, priceRange, priceSort]);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -252,29 +273,108 @@ const Products = () => {
 
         {/* Products Grid - Only show when not loading */}
         {!loading && (
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            key={
-              selectedCategories.join(",") +
-              selectedGenders.join(",") +
-              priceSort +
-              priceRange[1]
-            }
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
-          >
-            <AnimatePresence mode="wait">
-              {filteredProducts.map((product) => (
-                <ProductCard
-                  key={product._id}
-                  product={product}
-                  formatPrice={formatPrice}
-                  calculateFinalPrice={calculateFinalPrice}
-                />
-              ))}
-            </AnimatePresence>
-          </motion.div>
+          <>
+            <motion.div
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              key={
+                selectedCategories.join(",") +
+                selectedGenders.join(",") +
+                priceSort +
+                priceRange[1] +
+                currentPage
+              }
+              className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"
+            >
+              <AnimatePresence mode="wait">
+                {currentProducts.map((product) => (
+                  <ProductCard
+                    key={product._id}
+                    product={product}
+                    formatPrice={formatPrice}
+                    calculateFinalPrice={calculateFinalPrice}
+                  />
+                ))}
+              </AnimatePresence>
+            </motion.div>
+
+            {/* Pagination - Only show if more than 10 products */}
+            {filteredProducts.length > productsPerPage && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex justify-center items-center mt-12 space-x-4"
+              >
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(1, prev - 1))
+                  }
+                  disabled={currentPage === 1}
+                  className={`p-2 rounded-full ${
+                    currentPage === 1
+                      ? "text-primary/30 cursor-not-allowed"
+                      : "text-primary hover:bg-primary/10 cursor-pointer"
+                  }`}
+                >
+                  <ChevronLeft size={24} />
+                </motion.button>
+
+                <div className="flex items-center space-x-2">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNumber;
+                    if (totalPages <= 5) {
+                      pageNumber = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNumber = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNumber = totalPages - 4 + i;
+                    } else {
+                      pageNumber = currentPage - 2 + i;
+                    }
+
+                    return pageNumber <= totalPages ? (
+                      <motion.button
+                        key={pageNumber}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => setCurrentPage(pageNumber)}
+                        className={`w-10 h-10 rounded-full font-semibold transition-all duration-300 ${
+                          currentPage === pageNumber
+                            ? "bg-secondary text-background"
+                            : "text-primary hover:bg-primary/10"
+                        }`}
+                      >
+                        {pageNumber}
+                      </motion.button>
+                    ) : null;
+                  })}
+                </div>
+
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                  className={`p-2 rounded-full ${
+                    currentPage === totalPages
+                      ? "text-primary/30 cursor-not-allowed"
+                      : "text-primary hover:bg-primary/10 cursor-pointer"
+                  }`}
+                >
+                  <ChevronRight size={24} />
+                </motion.button>
+
+                <span className="text-primary/60 text-sm ml-4">
+                  Page {currentPage} sur {totalPages}
+                </span>
+              </motion.div>
+            )}
+          </>
         )}
 
         {/* Empty State - Only show when not loading and no products */}
