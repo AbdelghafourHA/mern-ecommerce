@@ -273,7 +273,7 @@ const Cosmetics = () => {
                 setPriceRange([0, 50000]);
                 setPriceSort("none");
               }}
-              className="bg-secondary text-primary px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 text-sm sm:text-base"
+              className="bg-accent text-primary px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 text-sm sm:text-base"
             >
               Réinitialiser les filtres
             </motion.button>

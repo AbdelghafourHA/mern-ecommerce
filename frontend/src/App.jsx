@@ -16,6 +16,8 @@ import Product from "./pages/Product.jsx";
 import { Toaster } from "react-hot-toast";
 import { useAdminStore } from "./stores/useAdminStore.js";
 import LoadingSpinner from "./components/LoadingSpinner";
+import ScrollToTopButton from "./components/ScrollToTopButton.jsx";
+import ScrollProgressBar from "./components/ScrollProgressBar .jsx";
 
 const App = () => {
   const { user, checkAuth, checkingAuth } = useAdminStore();
@@ -30,7 +32,8 @@ const App = () => {
     <CartProvider>
       <Navbar />
       <Cart />
-      <ScrollToTop />
+      <ScrollToTopButton />
+      <ScrollProgressBar />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/products" element={<Products />} />

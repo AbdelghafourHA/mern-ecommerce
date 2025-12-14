@@ -1,12 +1,21 @@
 import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ChevronRight, ShoppingCart, Shield, Truck, Clock } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  ChevronRight,
+  ShoppingCart,
+  Shield,
+  Truck,
+  Clock,
+  Pause,
+  Play,
+} from "lucide-react";
 import Footer from "../components/Footer";
 import { useProductStore } from "../stores/useProductStore";
 import { useCartStore } from "../stores/useCartStore";
 
 import { Perfum, Cosmetic, Gift } from "../utils/utils";
+import HeroSection from "../components/HeroSection";
 
 const Home = () => {
   const categories = [
@@ -78,72 +87,7 @@ const Home = () => {
       style={{ fontFamily: "var(--font-p01, sans-serif)" }}
     >
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/10">
-        <div className="absolute inset-0 bg-black/5"></div>
-        <div className="relative z-10 text-center max-w-4xl mx-auto px-4 sm:px-6">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="mb-8"
-          >
-            <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-primary mb-4 sm:mb-6 leading-tight">
-              Mounir Fragrance
-            </h1>
-            <p className="text-sm xs:text-base sm:text-lg md:text-xl lg:text-2xl text-primary/80 mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed">
-              Découvrez l'élégance intemporelle avec nos parfums et cosmétiques
-              de luxe. Une expérience sensorielle unique pour chaque occasion.
-            </p>
-          </motion.div>
-          <Link to="/products">
-            <motion.button
-              // onClick={() => getAllProducts()}
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{
-                delay: 0.15,
-                type: "spring",
-                stiffness: 400,
-                damping: 15,
-                mass: 0.8,
-                duration: 0.3,
-              }}
-              whileHover={{
-                scale: 1.05,
-                transition: {
-                  type: "spring",
-                  stiffness: 500,
-                  damping: 12,
-                  duration: 0.15,
-                },
-              }}
-              whileTap={{
-                scale: 0.97,
-                transition: {
-                  type: "spring",
-                  stiffness: 600,
-                  damping: 10,
-                  duration: 0.1,
-                },
-              }}
-              className="cursor-pointer bg-secondary text-primary px-6 sm:px-8 py-3 sm:py-4 rounded-full font-semibold text-sm sm:text-base md:text-lg hover:shadow-xl transition-all duration-300 group relative overflow-hidden"
-            >
-              {/* Optional shine effect on hover */}
-              <motion.span
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
-                initial={{ x: "-100%" }}
-                whileHover={{ x: "100%" }}
-                transition={{ duration: 0.6, ease: "easeInOut" }}
-              />
-
-              <span className="relative flex items-center justify-center">
-                Découvrir la Collection
-                <ChevronRight className="inline ml-2 w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform duration-200 ease-out" />
-              </span>
-            </motion.button>
-          </Link>
-        </div>
-      </section>
+      <HeroSection />
 
       {/* Shop by Category Section */}
       <section className="py-16 md:py-20 bg-background">

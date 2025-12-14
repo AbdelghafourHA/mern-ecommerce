@@ -19,16 +19,7 @@ const Navbar = () => {
   const { cart } = useCartStore();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
   const { setIsCartOpen } = useCart();
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   const navItems = [
     { name: "Parfums", link: "perfumes" },
@@ -89,11 +80,7 @@ const Navbar = () => {
       <motion.nav
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-          isScrolled
-            ? "bg-background backdrop-blur-xl shadow-lg border-b border-gray-100"
-            : "bg-transparent"
-        }`}
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 bg-primary backdrop-blur-xl shadow-lg `}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 lg:h-20">
@@ -126,7 +113,7 @@ const Navbar = () => {
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         className={` font-medium transition-colors duration-300 cursor-pointer text-lg
-                        text-primary hover:text-secondary`}
+                        text-background hover:text-secondary`}
                       >
                         {item.name}
                       </motion.button>
@@ -143,7 +130,7 @@ const Navbar = () => {
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  className={`cursor-pointer p-2 rounded-full transition-colors text-primary hover:text-secondary hover:bg-secondary/10`}
+                  className={`cursor-pointer p-2 rounded-full transition-colors text-background hover:text-secondary hover:bg-secondary/10`}
                 >
                   <Home size={22} />
                 </motion.button>
@@ -155,7 +142,7 @@ const Navbar = () => {
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  className={`cursor-pointer p-2 rounded-full transition-colors text-primary hover:text-secondary hover:bg-secondary/10`}
+                  className={`cursor-pointer p-2 rounded-full transition-colors text-background hover:text-secondary hover:bg-secondary/10`}
                 >
                   <LayoutDashboard size={22} />
                 </motion.button>
@@ -166,7 +153,7 @@ const Navbar = () => {
                 onClick={() => setIsCartOpen(true)}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                className={`cursor-pointer relative p-2 rounded-full transition-colors text-primary hover:text-secondary hover:bg-secondary/10`}
+                className={`cursor-pointer relative p-2 rounded-full transition-colors text-background hover:text-secondary hover:bg-secondary/10`}
               >
                 <ShoppingBag size={22} />
                 <motion.span
@@ -183,7 +170,7 @@ const Navbar = () => {
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setIsOpen(!isOpen)}
-                className={`cursor-pointer md:hidden p-2 rounded-full transition-colors text-primary hover:text-secondary hover:bg-secondary/10`}
+                className={`cursor-pointer md:hidden p-2 rounded-full transition-colors text-background hover:text-secondary hover:bg-secondary/10`}
               >
                 {isOpen ? <X size={24} /> : <Menu size={24} />}
               </motion.button>
