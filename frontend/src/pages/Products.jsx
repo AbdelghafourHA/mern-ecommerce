@@ -427,7 +427,7 @@ const Products = () => {
 };
 
 // Product Card (updated with clean design)
-// Product Card (Alternative - Cleaner mobile version)
+// Product Card (Ultra Refined Professional Version)
 const ProductCard = ({ product, formatPrice, calculateFinalPrice }) => {
   const { addToCart } = useCartStore();
 
@@ -437,69 +437,100 @@ const ProductCard = ({ product, formatPrice, calculateFinalPrice }) => {
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.8 }}
-      whileHover={{ y: -5 }}
-      className="bg-background rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group flex flex-col h-full"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      whileHover={{
+        y: -8,
+        boxShadow: "0 20px 40px rgba(0, 0, 0, 0.1)",
+      }}
+      transition={{ duration: 0.3 }}
+      className="bg-background rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 group flex flex-col h-full border border-primary/5"
     >
       <Link to={`/products/${product._id}`} className="flex-grow">
+        {/* Image Container with Glow Effect */}
         <div className="relative overflow-hidden aspect-square">
+          {/* Glow effect on hover */}
+          <div className="absolute inset-0 bg-gradient-to-t from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10" />
+
           <img
             src={product.image}
             alt={product.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
           />
 
-          {/* Combined badge for mobile */}
-          <div className="absolute top-2 left-2 flex flex-col gap-1">
-            <div className="bg-secondary text-primary px-2 py-1 rounded-full text-[10px] xs:text-xs font-semibold truncate max-w-[80px]">
+          {/* Badges Container - Elegant floating effect */}
+          <div className="absolute top-4 left-4 right-4 flex justify-between items-start z-20">
+            {/* Gender Badge */}
+            <div className="bg-accent/90 backdrop-blur-sm text-primary px-3 py-1.5 rounded-full text-xs font-semibold leading-none shadow-lg border border-white/20">
+              {product.gender}
+            </div>
+
+            {/* Category Badge */}
+            <div className="bg-secondary/90 backdrop-blur-sm text-primary px-3 py-1.5 rounded-full text-xs font-semibold leading-none shadow-lg border border-white/20">
               {product.category}
             </div>
-            {hasDiscount && (
-              <div className="bg-red-500 text-white px-2 py-1 rounded-full text-[10px] xs:text-xs font-bold">
-                -{product.discount}%
-              </div>
-            )}
           </div>
+
+          {/* Discount Badge - Prominent but elegant */}
+          {hasDiscount && (
+            <motion.div
+              initial={{ scale: 0.9, rotate: -5 }}
+              animate={{ scale: 1, rotate: 0 }}
+              className="absolute bottom-4 left-4"
+            >
+              <div className="bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-2 rounded-xl text-sm font-bold leading-none shadow-lg">
+                -{product.discount}% OFF
+              </div>
+            </motion.div>
+          )}
         </div>
 
-        <div className="p-3">
-          <h3 className="text-xs xs:text-sm font-semibold text-primary mb-2 line-clamp-2 min-h-[2.5em]">
+        {/* Content Section with Perfect Typography */}
+        <div className="p-5 sm:p-6">
+          {/* Product Title */}
+          <h3 className="text-base sm:text-lg font-semibold text-primary mb-3 leading-tight line-clamp-2 min-h-[3.5em]">
             {product.title}
           </h3>
 
-          <div className="flex items-center justify-between">
-            <div>
+          {/* Price Section */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
               <span
-                className={`text-sm xs:text-base font-bold ${
+                className={`text-xl sm:text-2xl font-bold ${
                   hasDiscount ? "text-red-600" : "text-secondary"
                 }`}
               >
                 {formatPrice(finalPrice)}
               </span>
+
               {hasDiscount && (
-                <div className="text-[10px] xs:text-xs text-primary/60 line-through">
+                <span className="text-sm sm:text-base text-primary/60 line-through font-medium">
                   {formatPrice(product.price)}
-                </div>
+                </span>
               )}
             </div>
-            <div className="text-[10px] xs:text-xs text-primary/60 px-2 py-1 rounded-full border border-primary/20 capitalize">
-              {product.gender}
-            </div>
+
+            {/* Optional product details */}
+            {product.description && (
+              <p className="text-sm text-primary/60 line-clamp-1">
+                {product.description}
+              </p>
+            )}
           </div>
         </div>
       </Link>
 
-      <div className="p-3 pt-0 mt-auto">
+      {/* CTA Button - Professional with gradient */}
+      <div className="p-5 sm:p-6 pt-0 mt-auto">
         <motion.button
           onClick={() => addToCart(product)}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="w-full bg-primary text-background py-2 rounded-xl font-semibold hover:bg-primary/90 transition-all duration-300 flex items-center justify-center space-x-2 text-xs xs:text-sm"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className="w-full bg-gradient-to-r from-primary to-primary/90 text-background py-3.5 sm:py-4 rounded-xl font-semibold hover:from-primary/90 hover:to-primary transition-all duration-300 flex items-center justify-center gap-3 text-base shadow-lg hover:shadow-xl active:shadow-md"
         >
-          <ShoppingCart className="w-3 h-3 xs:w-4 xs:h-4" />
-          <span>Ajouter</span>
+          <ShoppingCart className="w-5 h-5" />
+          <span>Ajouter au panier</span>
         </motion.button>
       </div>
     </motion.div>
