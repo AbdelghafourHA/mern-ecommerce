@@ -11,7 +11,6 @@ const Product = () => {
   const { getProductById, product, loading } = useProductStore();
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
-  const [isBuyNow, setIsBuyNow] = useState(false); // Track if we're doing direct checkout
 
   useEffect(() => {
     if (productId) {
@@ -30,13 +29,7 @@ const Product = () => {
   const handleBuyNow = () => {
     if (!product) return;
 
-    // Create a temporary cart with ONLY this product and quantity
-    const checkoutProduct = {
-      ...product,
-      quantity: quantity,
-    };
-
-    // Calculate total price
+    // Calculate unit price with discount
     const unitPrice =
       product.discount > 0
         ? product.newPrice > 0
@@ -44,13 +37,21 @@ const Product = () => {
           : Math.round(product.price * (1 - product.discount / 100))
         : product.price;
 
-    const total = unitPrice * quantity;
+    // Create a temporary cart with ONLY this product and quantity
+    const checkoutProduct = {
+      ...product,
+      quantity: quantity,
+      unitPrice: unitPrice,
+    };
+
+    // Calculate total
+    const checkoutTotal = unitPrice * quantity;
 
     // Save to localStorage for checkout page
     const checkoutData = {
       directCheckout: true,
       product: checkoutProduct,
-      total: total,
+      total: checkoutTotal,
       count: quantity,
     };
 

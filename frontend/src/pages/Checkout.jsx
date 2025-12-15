@@ -13,11 +13,8 @@ import algeriaWillayas from "../utils/Willaya.json";
 import { useCheckoutStore } from "../stores/useCheckoutStore";
 
 const Checkout = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [currentStep, setCurrentStep] = useState(1);
   const [items, setItems] = useState([]);
-  const [total, setTotal] = useState(0);
+  const [checkoutTotal, setCheckoutTotal] = useState(0); // Changed from total to checkoutTotal
   const [count, setCount] = useState(0);
   const [isDirectCheckout, setIsDirectCheckout] = useState(false);
 
@@ -31,7 +28,7 @@ const Checkout = () => {
       // Use direct checkout data
       setIsDirectCheckout(true);
       setItems([directCheckoutData.product]);
-      setTotal(directCheckoutData.total);
+      setCheckoutTotal(directCheckoutData.total); // Changed
       setCount(directCheckoutData.count);
 
       // Clear direct checkout data after reading
@@ -54,10 +51,14 @@ const Checkout = () => {
 
       const newCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-      setTotal(newTotal);
+      setCheckoutTotal(newTotal); // Changed
       setCount(newCount);
     }
   }, []);
+
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [currentStep, setCurrentStep] = useState(1);
 
   // استخدام البيانات من ملف JSON
   const algeriaWilayas = {};
