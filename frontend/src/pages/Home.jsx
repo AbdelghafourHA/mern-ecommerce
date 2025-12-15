@@ -215,7 +215,21 @@ const Home = () => {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <motion.div
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: {
+                  staggerChildren: 0.1,
+                },
+              },
+            }}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"
+          >
             {products.map((product, index) => {
               // حساب السعر النهائي
               const finalPrice = calculateFinalPrice(product);
@@ -223,48 +237,50 @@ const Home = () => {
 
               return (
                 <motion.div
-                  key={product._id}
-                  initial={{ opacity: 0, y: 50 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1, duration: 0.6 }}
+                  layout
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
                   viewport={{ once: true }}
+                  transition={{ delay: index * 0.1, duration: 0.6 }}
                   whileHover={{ y: -5, scale: 1.02 }}
-                  className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group"
+                  key={product._id}
+                  className="bg-background rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group flex flex-col h-full"
                 >
                   <Link to={`/products/${product._id}`}>
-                    <div className="relative overflow-hidden">
+                    <div className="relative overflow-hidden aspect-square">
                       <img
                         src={product.image}
                         alt={product.title}
-                        className="w-full h-48 md:h-56 object-cover group-hover:scale-105 transition-transform duration-500"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
                       {/* Top Badges - Category and Gender always on top */}
-                      <div className="absolute top-3 right-3 bg-secondary text-primary px-2 py-1 rounded-full text-xs font-semibold">
+                      <div className="absolute top-2 right-2 bg-secondary text-primary px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold">
                         {product.category}
                       </div>
-                      <div className="absolute top-3 left-3 bg-accent text-primary px-2 py-1 rounded-full text-xs font-semibold capitalize">
+                      <div className="absolute top-2 left-2 bg-accent text-primary px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold capitalize">
                         {product.gender}
                       </div>
 
                       {/* Discount Badge below gender badge */}
                       {hasDiscount && (
-                        <div className="absolute top-12 left-3 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+                        <div className="absolute top-10 left-2 bg-red-500 text-white px-2 py-1 rounded-full text-[10px] sm:text-xs font-bold">
                           -{product.discount}%
                         </div>
                       )}
                     </div>
                   </Link>
 
-                  <div className="p-4">
-                    <h3 className="text-sm sm:text-base font-semibold text-primary mb-3 line-clamp-2">
+                  <div className="p-3 sm:p-4 flex flex-col grow">
+                    {/* Product Title - Responsive text size and line clamp */}
+                    <h3 className="text-sm sm:text-base font-semibold text-primary mb-2 sm:mb-3 line-clamp-2 min-h-[2.5em]">
                       {product.title}
                     </h3>
 
-                    {/* Price Display - Clean and Professional */}
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-2">
+                    {/* Price Display - Clean and Professional with responsive sizing */}
+                    <div className="mb-3 grow">
+                      <div className="flex items-center space-x-1 sm:space-x-2 flex-wrap">
                         <span
-                          className={`text-lg font-bold ${
+                          className={`text-sm sm:text-base lg:text-lg font-bold ${
                             hasDiscount ? "text-red-600" : "text-secondary"
                           }`}
                         >
@@ -272,28 +288,30 @@ const Home = () => {
                         </span>
 
                         {hasDiscount && (
-                          <span className="text-sm text-primary/60 line-through">
+                          <span className="text-xs sm:text-sm lg:text-base text-primary/60 line-through">
                             {formatPrice(product.price)}
                           </span>
                         )}
                       </div>
                     </div>
 
-                    {/* Add to Cart Button */}
+                    {/* Add to Cart Button - Responsive text and padding */}
                     <motion.button
                       onClick={() => addToCart(product)}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      className="w-full bg-primary text-background py-2 rounded-xl font-semibold hover:bg-primary/90 transition-all duration-300 flex items-center justify-center space-x-2"
+                      className="w-full bg-primary text-background py-2 px-2 sm:px-3 rounded-xl font-semibold hover:bg-primary/90 transition-all duration-300 flex items-center justify-center space-x-1 sm:space-x-2 mt-auto"
                     >
-                      <ShoppingCart className="w-4 h-4" />
-                      <span>Ajouter au panier</span>
+                      <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span className="truncate text-sm md:text-base lg:text-lg">
+                        Ajouter
+                      </span>
                     </motion.button>
                   </div>
                 </motion.div>
               );
             })}
-          </div>
+          </motion.div>
         </div>
       </section>
 
