@@ -16,6 +16,48 @@ const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [currentStep, setCurrentStep] = useState(1);
+  const [items, setItems] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [count, setCount] = useState(0);
+  const [isDirectCheckout, setIsDirectCheckout] = useState(false);
+
+  useEffect(() => {
+    // Check if we have a direct checkout
+    const directCheckoutData = JSON.parse(
+      localStorage.getItem("directCheckout") || "null"
+    );
+
+    if (directCheckoutData && directCheckoutData.directCheckout) {
+      // Use direct checkout data
+      setIsDirectCheckout(true);
+      setItems([directCheckoutData.product]);
+      setTotal(directCheckoutData.total);
+      setCount(directCheckoutData.count);
+
+      // Clear direct checkout data after reading
+      localStorage.removeItem("directCheckout");
+    } else {
+      // Normal checkout from cart
+      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+      setItems(cart);
+
+      // Calculate totals
+      const newTotal = cart.reduce((sum, item) => {
+        const price =
+          item.discount > 0
+            ? item.newPrice > 0
+              ? item.newPrice
+              : Math.round(item.price * (1 - item.discount / 100))
+            : item.price;
+        return sum + price * item.quantity;
+      }, 0);
+
+      const newCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+      setTotal(newTotal);
+      setCount(newCount);
+    }
+  }, []);
 
   // استخدام البيانات من ملف JSON
   const algeriaWilayas = {};

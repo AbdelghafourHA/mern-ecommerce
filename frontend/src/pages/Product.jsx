@@ -11,6 +11,7 @@ const Product = () => {
   const { getProductById, product, loading } = useProductStore();
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
+  const [isBuyNow, setIsBuyNow] = useState(false); // Track if we're doing direct checkout
 
   useEffect(() => {
     if (productId) {
@@ -25,18 +26,41 @@ const Product = () => {
 
   const { addToCartWithQuantity } = useCartStore();
 
-  // Fixed handleBuyNow - Add to cart AND navigate to checkout
+  // Direct checkout - only this product
   const handleBuyNow = () => {
     if (!product) return;
 
-    // Add the product with quantity to cart
-    addToCartWithQuantity(product, quantity);
+    // Create a temporary cart with ONLY this product and quantity
+    const checkoutProduct = {
+      ...product,
+      quantity: quantity,
+    };
+
+    // Calculate total price
+    const unitPrice =
+      product.discount > 0
+        ? product.newPrice > 0
+          ? product.newPrice
+          : Math.round(product.price * (1 - product.discount / 100))
+        : product.price;
+
+    const total = unitPrice * quantity;
+
+    // Save to localStorage for checkout page
+    const checkoutData = {
+      directCheckout: true,
+      product: checkoutProduct,
+      total: total,
+      count: quantity,
+    };
+
+    localStorage.setItem("directCheckout", JSON.stringify(checkoutData));
 
     // Navigate to checkout
     navigate("/checkout");
   };
 
-  // Handle adding to cart only
+  // Normal add to cart - adds to existing cart
   const handleAddToCart = () => {
     if (!product) return;
     addToCartWithQuantity(product, quantity);
@@ -292,6 +316,18 @@ const Product = () => {
                   </span>
                 )}
               </motion.button>
+            </div>
+
+            {/* Info text for Buy Now */}
+            <div className="pt-2">
+              <p className="text-xs sm:text-sm text-primary/60">
+                <strong>Acheter Maintenant:</strong> Commande directe de ce
+                produit seulement (sans ajouter au panier)
+              </p>
+              <p className="text-xs sm:text-sm text-primary/60 mt-1">
+                <strong>Ajouter au Panier:</strong> Ajoute à votre panier
+                existant
+              </p>
             </div>
           </div>
         </motion.div>
