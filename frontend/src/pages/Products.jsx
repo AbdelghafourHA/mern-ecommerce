@@ -426,8 +426,7 @@ const Products = () => {
   );
 };
 
-// Product Card (updated with clean design)
-// Product Card (Ultra Refined Professional Version)
+// Product Card (updated with responsive design for 2 items per row)
 const ProductCard = ({ product, formatPrice, calculateFinalPrice }) => {
   const { addToCart } = useCartStore();
 
@@ -437,100 +436,71 @@ const ProductCard = ({ product, formatPrice, calculateFinalPrice }) => {
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      whileHover={{
-        y: -8,
-        boxShadow: "0 20px 40px rgba(0, 0, 0, 0.1)",
-      }}
-      transition={{ duration: 0.3 }}
-      className="bg-background rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 group flex flex-col h-full border border-primary/5"
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.8 }}
+      whileHover={{ y: -5, scale: 1.02 }}
+      className="bg-background rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group flex flex-col h-full"
     >
-      <Link to={`/products/${product._id}`} className="flex-grow">
-        {/* Image Container with Glow Effect */}
+      <Link to={`/products/${product._id}`}>
         <div className="relative overflow-hidden aspect-square">
-          {/* Glow effect on hover */}
-          <div className="absolute inset-0 bg-gradient-to-t from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10" />
-
           <img
             src={product.image}
             alt={product.title}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
 
-          {/* Badges Container - Elegant floating effect */}
-          <div className="absolute top-4 left-4 right-4 flex justify-between items-start z-20">
-            {/* Gender Badge */}
-            <div className="bg-accent/90 backdrop-blur-sm text-primary px-3 py-1.5 rounded-full text-xs font-semibold leading-none shadow-lg border border-white/20">
-              {product.gender}
-            </div>
-
-            {/* Category Badge */}
-            <div className="bg-secondary/90 backdrop-blur-sm text-primary px-3 py-1.5 rounded-full text-xs font-semibold leading-none shadow-lg border border-white/20">
-              {product.category}
-            </div>
+          {/* Top Badges - Responsive positioning */}
+          <div className="absolute top-2 right-2 bg-secondary text-primary px-2 py-1 rounded-full text-[10px] xs:text-xs font-semibold">
+            {product.category}
+          </div>
+          <div className="absolute top-2 left-2 bg-accent text-primary px-2 py-1 rounded-full text-[10px] xs:text-xs font-semibold capitalize">
+            {product.gender}
           </div>
 
-          {/* Discount Badge - Prominent but elegant */}
+          {/* Discount Badge - Responsive size */}
           {hasDiscount && (
-            <motion.div
-              initial={{ scale: 0.9, rotate: -5 }}
-              animate={{ scale: 1, rotate: 0 }}
-              className="absolute bottom-4 left-4"
-            >
-              <div className="bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-2 rounded-xl text-sm font-bold leading-none shadow-lg">
-                -{product.discount}% OFF
-              </div>
-            </motion.div>
-          )}
-        </div>
-
-        {/* Content Section with Perfect Typography */}
-        <div className="p-5 sm:p-6">
-          {/* Product Title */}
-          <h3 className="text-base sm:text-lg font-semibold text-primary mb-3 leading-tight line-clamp-2 min-h-[3.5em]">
-            {product.title}
-          </h3>
-
-          {/* Price Section */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <span
-                className={`text-xl sm:text-2xl font-bold ${
-                  hasDiscount ? "text-red-600" : "text-secondary"
-                }`}
-              >
-                {formatPrice(finalPrice)}
-              </span>
-
-              {hasDiscount && (
-                <span className="text-sm sm:text-base text-primary/60 line-through font-medium">
-                  {formatPrice(product.price)}
-                </span>
-              )}
+            <div className="absolute top-10 left-2 bg-red-500 text-white px-2 py-1 rounded-full text-[10px] xs:text-xs font-bold">
+              -{product.discount}%
             </div>
-
-            {/* Optional product details */}
-            {product.description && (
-              <p className="text-sm text-primary/60 line-clamp-1">
-                {product.description}
-              </p>
-            )}
-          </div>
+          )}
         </div>
       </Link>
 
-      {/* CTA Button - Professional with gradient */}
-      <div className="p-5 sm:p-6 pt-0 mt-auto">
+      <div className="p-3 sm:p-4 flex flex-col flex-grow">
+        {/* Product Title - Responsive text size and line clamp */}
+        <h3 className="text-xs xs:text-sm sm:text-base font-semibold text-primary mb-2 sm:mb-3 line-clamp-2 min-h-[2.5em]">
+          {product.title}
+        </h3>
+
+        {/* Price Display - Clean and Professional with responsive sizing */}
+        <div className="mb-3 flex-grow">
+          <div className="flex items-center space-x-1 xs:space-x-2 flex-wrap">
+            <span
+              className={`text-sm xs:text-base sm:text-lg font-bold ${
+                hasDiscount ? "text-red-600" : "text-secondary"
+              }`}
+            >
+              {formatPrice(finalPrice)}
+            </span>
+
+            {hasDiscount && (
+              <span className="text-xs xs:text-sm text-primary/60 line-through">
+                {formatPrice(product.price)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Add to Cart Button - Responsive text and padding */}
         <motion.button
           onClick={() => addToCart(product)}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          className="w-full bg-gradient-to-r from-primary to-primary/90 text-background py-3.5 sm:py-4 rounded-xl font-semibold hover:from-primary/90 hover:to-primary transition-all duration-300 flex items-center justify-center gap-3 text-base shadow-lg hover:shadow-xl active:shadow-md"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="w-full bg-primary text-background py-2 px-2 xs:px-3 rounded-xl font-semibold hover:bg-primary/90 transition-all duration-300 flex items-center justify-center space-x-1 xs:space-x-2 text-xs xs:text-sm sm:text-base mt-auto"
         >
-          <ShoppingCart className="w-5 h-5" />
-          <span>Ajouter au panier</span>
+          <ShoppingCart className="w-3 h-3 xs:w-4 xs:h-4" />
+          <span className="truncate text-sm md:text-base">Ajouter</span>
         </motion.button>
       </div>
     </motion.div>
