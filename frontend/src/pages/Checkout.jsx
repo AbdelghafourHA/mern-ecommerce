@@ -390,11 +390,6 @@ const Checkout = () => {
                             x{item.quantity}
                           </span>
                         </div>
-                        {item.discount > 0 && (
-                          <span className="text-xs text-red-500 font-bold">
-                            -{item.discount}%
-                          </span>
-                        )}
                       </div>
                     </div>
                   ))

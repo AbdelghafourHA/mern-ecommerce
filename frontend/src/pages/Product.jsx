@@ -318,18 +318,6 @@ const Product = () => {
                 )}
               </motion.button>
             </div>
-
-            {/* Info text for Buy Now */}
-            <div className="pt-2">
-              <p className="text-xs sm:text-sm text-primary/60">
-                <strong>Acheter Maintenant:</strong> Commande directe de ce
-                produit seulement (sans ajouter au panier)
-              </p>
-              <p className="text-xs sm:text-sm text-primary/60 mt-1">
-                <strong>Ajouter au Panier:</strong> Ajoute à votre panier
-                existant
-              </p>
-            </div>
           </div>
         </motion.div>
       </section>
