@@ -7,35 +7,38 @@ import {
   Shield,
   CheckCircle,
 } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { useCartStore } from "../stores/useCartStore";
+import { useNavigate } from "react-router-dom";
 import algeriaWillayas from "../utils/Willaya.json";
 import { useCheckoutStore } from "../stores/useCheckoutStore";
 
 const Checkout = () => {
   const [items, setItems] = useState([]);
-  const [checkoutTotal, setCheckoutTotal] = useState(0); // Changed from total to checkoutTotal
-  const [count, setCount] = useState(0);
+  const [checkoutTotal, setCheckoutTotal] = useState(0);
+  const [itemCount, setItemCount] = useState(0);
   const [isDirectCheckout, setIsDirectCheckout] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   useEffect(() => {
-    // Check if we have a direct checkout
+    // Check if we have a direct checkout in localStorage FIRST
     const directCheckoutData = JSON.parse(
       localStorage.getItem("directCheckout") || "null"
     );
 
     if (directCheckoutData && directCheckoutData.directCheckout) {
       // Use direct checkout data
+      console.log("Direct checkout detected:", directCheckoutData);
       setIsDirectCheckout(true);
       setItems([directCheckoutData.product]);
-      setCheckoutTotal(directCheckoutData.total); // Changed
-      setCount(directCheckoutData.count);
+      setCheckoutTotal(directCheckoutData.total);
+      setItemCount(directCheckoutData.count);
 
       // Clear direct checkout data after reading
       localStorage.removeItem("directCheckout");
     } else {
       // Normal checkout from cart
       const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+      console.log("Normal cart checkout:", cart);
+      setIsDirectCheckout(false);
       setItems(cart);
 
       // Calculate totals
@@ -51,13 +54,14 @@ const Checkout = () => {
 
       const newCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-      setCheckoutTotal(newTotal); // Changed
-      setCount(newCount);
+      setCheckoutTotal(newTotal);
+      setItemCount(newCount);
     }
+
+    setHasLoaded(true);
   }, []);
 
   const navigate = useNavigate();
-  const location = useLocation();
   const [currentStep, setCurrentStep] = useState(1);
 
   // استخدام البيانات من ملف JSON
@@ -71,27 +75,10 @@ const Checkout = () => {
     );
   });
 
-  const { cart } = useCartStore();
   const { createCheckout } = useCheckoutStore();
 
-  // تحديد العناصر المعروضة بناءً على حالة الشراء
-  const [checkoutItems, setCheckoutItems] = useState([]);
-
-  useEffect(() => {
-    // التحقق إذا كان هناك منتج معين في حالة location (من زر "Acheter Maintenant")
-    if (location.state && location.state.product) {
-      // سيناريو الشراء المباشر - منتج واحد فقط
-      setCheckoutItems([{ ...location.state.product, quantity: 1 }]);
-    } else {
-      // سيناريو السلة - جميع المنتجات
-      setCheckoutItems(cart);
-    }
-  }, [location.state, cart]);
-
-  const subtotal = checkoutItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+  // Calculate subtotal based on current items
+  const subtotal = checkoutTotal;
   const shipping = 1000;
   const total = subtotal + shipping;
 
@@ -112,12 +99,6 @@ const Checkout = () => {
 
     // Payment Method
     paymentMethod: "COD",
-
-    // Order Summary - سيتم تحديثها قبل الإرسال
-    orderItems: [],
-    subtotalPrice: 0,
-    shippingPrice: 0,
-    totalPrice: 0,
   });
 
   const formatPrice = (price) => {
@@ -159,22 +140,26 @@ const Checkout = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Prepare order items based on checkout type
+    const orderItems = items.map((item) => ({
+      name: item.title,
+      quantity: item.quantity,
+      image: item.image,
+      price: item.unitPrice || item.price, // Use unitPrice for direct checkout
+      product: item._id,
+    }));
+
     // تجهيز بيانات الطلب النهائية
     const orderData = {
       ...formData,
-      orderItems: checkoutItems.map((item) => ({
-        name: item.title,
-        quantity: item.quantity,
-        image: item.image,
-        price: item.price,
-        product: item._id, // تأكد من أن item يحتوي على _id للمنتج
-      })),
+      orderItems: orderItems,
       subtotalPrice: subtotal,
       shippingPrice: shipping,
       totalPrice: total,
+      checkoutType: isDirectCheckout ? "direct" : "cart",
     };
 
-    console.log("Sending order data:", orderData); // للتصحيح
+    console.log("Sending order data:", orderData);
 
     await createCheckout(orderData);
 
@@ -188,6 +173,17 @@ const Checkout = () => {
     { number: 4, title: "Confirmation", icon: <CheckCircle size={20} /> },
   ];
 
+  if (!hasLoaded) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-primary">Chargement de la commande...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background pt-20">
       <div className="costum-section">
@@ -197,11 +193,27 @@ const Checkout = () => {
           animate={{ y: 0, opacity: 1 }}
           className="mb-6 sm:mb-8"
         >
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={() => navigate(-1)}
+              className="cursor-pointer flex items-center space-x-2 text-primary hover:text-secondary transition-colors font-bold01 text-sm sm:text-base"
+            >
+              <ArrowLeft size={18} className="sm:w-5 sm:h-5" />
+              <span>Retour</span>
+            </button>
+
+            {isDirectCheckout && (
+              <span className="bg-secondary text-primary px-3 py-1 rounded-full text-xs sm:text-sm font-bold">
+                Achat direct
+              </span>
+            )}
+          </div>
+
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-primary font-p01 mb-4 text-center lg:text-left">
-            Finaliser la Commande
+            {isDirectCheckout ? "Achat Direct" : "Finaliser la Commande"}
           </h1>
 
-          {/* Progress Steps - Made Responsive */}
+          {/* Progress Steps */}
           <div className="flex justify-center mb-6 sm:mb-8 lg:mb-12">
             <div className="w-full max-w-4xl">
               {/* Mobile Steps - Vertical Layout */}
@@ -322,41 +334,6 @@ const Checkout = () => {
                 ))}
               </div>
 
-              {/* Alternative Mobile Steps - Compact Horizontal */}
-              <div className="sm:flex lg:hidden hidden justify-center mt-6">
-                <div className="flex items-center space-x-2">
-                  {steps.map((step, index) => (
-                    <div key={step.number} className="flex items-center">
-                      <div
-                        className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 transition-all duration-300 ${
-                          currentStep >= step.number
-                            ? "bg-secondary border-secondary text-primary"
-                            : "border-primary/20 text-primary/40"
-                        }`}
-                      >
-                        {currentStep > step.number ? (
-                          <CheckCircle size={14} className="sm:w-4 sm:h-4" />
-                        ) : (
-                          React.cloneElement(step.icon, {
-                            size: 14,
-                            className: "sm:w-4 sm:h-4",
-                          })
-                        )}
-                      </div>
-                      {index < steps.length - 1 && (
-                        <div
-                          className={`w-4 sm:w-6 h-0.5 mx-1 sm:mx-2 ${
-                            currentStep > step.number
-                              ? "bg-secondary"
-                              : "bg-primary/20"
-                          }`}
-                        />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
               {/* Current Step Indicator for Mobile */}
               <div className="lg:hidden text-center mt-4 sm:mt-6">
                 <span className="bg-secondary text-primary px-3 sm:px-4 py-1 sm:py-2 rounded-full font-bold01 text-xs sm:text-sm">
@@ -376,40 +353,60 @@ const Checkout = () => {
               animate={{ opacity: 1, x: 0 }}
               className="bg-white rounded-xl shadow-lg border border-primary/10 p-4 sm:p-6 sticky top-24"
             >
-              <h3 className="text-lg sm:text-xl font-bold text-primary font-p01 mb-4 sm:mb-6">
-                Résumé de la Commande
-              </h3>
+              <div className="flex justify-between items-center mb-4 sm:mb-6">
+                <h3 className="text-lg sm:text-xl font-bold text-primary font-p01">
+                  Résumé de la Commande
+                </h3>
+                {isDirectCheckout && (
+                  <span className="bg-primary/10 text-primary text-xs px-2 py-1 rounded-full">
+                    1 produit
+                  </span>
+                )}
+              </div>
 
               {/* Order Items */}
               <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
-                {checkoutItems.map((item) => (
-                  <div key={item._id} className="flex space-x-3">
-                    <img
-                      src={item.image}
-                      alt={item.title}
-                      className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg object-cover flex-shrink-0"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-primary font-bold01 text-xs sm:text-sm line-clamp-2">
-                        {item.title}
-                      </h4>
-                      <div className="flex justify-between items-center mt-1">
-                        <span className="text-secondary font-bold01 text-sm sm:text-base">
-                          {formatPrice(item.price)}
-                        </span>
-                        <span className="text-primary/60 text-xs sm:text-sm font-bold01">
-                          x{item.quantity}
-                        </span>
+                {items.length === 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-primary/60">Aucun produit</p>
+                  </div>
+                ) : (
+                  items.map((item) => (
+                    <div key={item._id} className="flex space-x-3">
+                      <img
+                        src={item.image}
+                        alt={item.title}
+                        className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg object-cover flex-shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-primary font-bold01 text-xs sm:text-sm line-clamp-2">
+                          {item.title}
+                        </h4>
+                        <div className="flex justify-between items-center mt-1">
+                          <span className="text-secondary font-bold01 text-sm sm:text-base">
+                            {formatPrice(item.unitPrice || item.price)}
+                          </span>
+                          <span className="text-primary/60 text-xs sm:text-sm font-bold01">
+                            x{item.quantity}
+                          </span>
+                        </div>
+                        {item.discount > 0 && (
+                          <span className="text-xs text-red-500 font-bold">
+                            -{item.discount}%
+                          </span>
+                        )}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
 
               {/* Order Totals */}
               <div className="space-y-2 sm:space-y-3 border-t border-primary/10 pt-3 sm:pt-4">
                 <div className="flex justify-between text-primary font-bold01 text-sm sm:text-base">
-                  <span>Sous-total</span>
+                  <span>
+                    Sous-total ({itemCount} article{itemCount > 1 ? "s" : ""})
+                  </span>
                   <span>{formatPrice(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-primary font-bold01 text-sm sm:text-base">
