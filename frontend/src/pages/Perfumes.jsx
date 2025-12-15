@@ -1,10 +1,17 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Filter, X, ShoppingCart, ArrowUp, ArrowDown } from "lucide-react";
+import {
+  Filter,
+  X,
+  ShoppingCart,
+  ArrowUp,
+  ArrowDown,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import Footer from "../components/Footer";
 import { Link } from "react-router-dom";
 import { useProductStore } from "../stores/useProductStore";
-import { useEffect } from "react";
 import { useCartStore } from "../stores/useCartStore";
 
 const Perfums = () => {
@@ -12,6 +19,8 @@ const Perfums = () => {
   const [selectedGenders, setSelectedGenders] = useState([]);
   const [priceRange, setPriceRange] = useState([0, 50000]);
   const [priceSort, setPriceSort] = useState("none");
+  const [currentPage, setCurrentPage] = useState(1);
+  const productsPerPage = 10;
 
   const { products, getProductByCategory, loading } = useProductStore();
 
@@ -85,6 +94,17 @@ const Perfums = () => {
 
     return filtered;
   }, [products, selectedGenders, priceRange, priceSort]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredParfums.length / productsPerPage);
+  const startIndex = (currentPage - 1) * productsPerPage;
+  const endIndex = startIndex + productsPerPage;
+  const currentParfums = filteredParfums.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedGenders, priceRange, priceSort]);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -226,32 +246,110 @@ const Perfums = () => {
 
         {/* Parfums Grid - Only show when not loading */}
         {!loading && (
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            key={
-              selectedGenders.join(",") +
-              selectedGenders.join(",") +
-              priceSort +
-              priceRange[1]
-            }
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
-          >
-            <AnimatePresence mode="wait">
-              {filteredParfums.map((parfum) => (
-                <ParfumCard
-                  key={parfum._id}
-                  parfum={parfum}
-                  formatPrice={formatPrice}
-                  calculateFinalPrice={calculateFinalPrice}
-                />
-              ))}
-            </AnimatePresence>
-          </motion.div>
+          <>
+            <motion.div
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              key={
+                selectedGenders.join(",") +
+                priceSort +
+                priceRange[1] +
+                currentPage
+              }
+              className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"
+            >
+              <AnimatePresence mode="wait">
+                {currentParfums.map((parfum) => (
+                  <ParfumCard
+                    key={parfum._id}
+                    parfum={parfum}
+                    formatPrice={formatPrice}
+                    calculateFinalPrice={calculateFinalPrice}
+                  />
+                ))}
+              </AnimatePresence>
+            </motion.div>
+
+            {/* Pagination - Only show if more than 10 parfums */}
+            {filteredParfums.length > productsPerPage && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex justify-center items-center mt-12 space-x-4"
+              >
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(1, prev - 1))
+                  }
+                  disabled={currentPage === 1}
+                  className={`p-2 rounded-full ${
+                    currentPage === 1
+                      ? "text-primary/30 cursor-not-allowed"
+                      : "text-primary hover:bg-primary/10 cursor-pointer"
+                  }`}
+                >
+                  <ChevronLeft size={24} />
+                </motion.button>
+
+                <div className="flex items-center space-x-2">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNumber;
+                    if (totalPages <= 5) {
+                      pageNumber = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNumber = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNumber = totalPages - 4 + i;
+                    } else {
+                      pageNumber = currentPage - 2 + i;
+                    }
+
+                    return pageNumber <= totalPages ? (
+                      <motion.button
+                        key={pageNumber}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => setCurrentPage(pageNumber)}
+                        className={`w-10 h-10 rounded-full font-semibold transition-all duration-300 ${
+                          currentPage === pageNumber
+                            ? "bg-secondary text-background"
+                            : "text-primary hover:bg-primary/10"
+                        }`}
+                      >
+                        {pageNumber}
+                      </motion.button>
+                    ) : null;
+                  })}
+                </div>
+
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                  className={`p-2 rounded-full ${
+                    currentPage === totalPages
+                      ? "text-primary/30 cursor-not-allowed"
+                      : "text-primary hover:bg-primary/10 cursor-pointer"
+                  }`}
+                >
+                  <ChevronRight size={24} />
+                </motion.button>
+
+                <span className="text-primary/60 text-sm ml-4">
+                  Page {currentPage} sur {totalPages}
+                </span>
+              </motion.div>
+            )}
+          </>
         )}
 
-        {/* Empty State - Only show when not loading and no products */}
+        {/* Empty State - Only show when not loading and no parfums */}
         {!loading && filteredParfums.length === 0 && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
@@ -296,11 +394,10 @@ const Perfums = () => {
   );
 };
 
-// Parfum Card - UPDATED with discount display
+// Parfum Card (updated with responsive design for 2 items per row)
 const ParfumCard = ({ parfum, formatPrice, calculateFinalPrice }) => {
   const { addToCart } = useCartStore();
 
-  // حساب السعر النهائي
   const finalPrice = calculateFinalPrice(parfum);
   const hasDiscount = parfum.discount > 0;
 
@@ -311,43 +408,44 @@ const ParfumCard = ({ parfum, formatPrice, calculateFinalPrice }) => {
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.8 }}
       whileHover={{ y: -5, scale: 1.02 }}
-      className="bg-background rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group"
+      className="bg-background rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group flex flex-col h-full"
     >
       <Link to={`/products/${parfum._id}`}>
-        <div className="relative overflow-hidden">
+        <div className="relative overflow-hidden aspect-square">
           <img
             src={parfum.image}
             alt={parfum.title}
-            className="w-full h-48 md:h-56 object-cover group-hover:scale-105 transition-transform duration-500"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
 
-          {/* Top Badges - Category and Gender always on top */}
-          <div className="absolute top-3 right-3 bg-secondary text-primary px-2 py-1 rounded-full text-xs font-semibold">
+          {/* Top Badges - Responsive positioning */}
+          <div className="absolute top-2 right-2 bg-secondary text-primary px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold">
             {parfum.category}
           </div>
-          <div className="absolute top-3 left-3 bg-accent text-primary px-2 py-1 rounded-full text-xs font-semibold capitalize">
+          <div className="absolute top-2 left-2 bg-accent text-primary px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold capitalize">
             {parfum.gender}
           </div>
 
-          {/* Discount Badge below gender badge */}
+          {/* Discount Badge - Responsive size */}
           {hasDiscount && (
-            <div className="absolute top-12 left-3 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+            <div className="absolute top-10 left-2 bg-red-500 text-white px-2 py-1 rounded-full text-[10px] sm:text-xs font-bold">
               -{parfum.discount}%
             </div>
           )}
         </div>
       </Link>
 
-      <div className="p-4">
-        <h3 className="text-sm sm:text-base font-semibold text-primary mb-3 line-clamp-2">
+      <div className="p-3 sm:p-4 flex flex-col grow">
+        {/* Parfum Title - Responsive text size and line clamp */}
+        <h3 className="text-sm sm:text-base font-semibold text-primary mb-2 sm:mb-3 line-clamp-2 min-h-[2.5em]">
           {parfum.title}
         </h3>
 
-        {/* Price Display - Clean and Professional */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center space-x-2">
+        {/* Price Display - Clean and Professional with responsive sizing */}
+        <div className="mb-3 grow">
+          <div className="flex items-center space-x-1 sm:space-x-2 flex-wrap">
             <span
-              className={`text-lg font-bold ${
+              className={`text-sm sm:text-base lg:text-lg font-bold ${
                 hasDiscount ? "text-red-600" : "text-secondary"
               }`}
             >
@@ -355,22 +453,24 @@ const ParfumCard = ({ parfum, formatPrice, calculateFinalPrice }) => {
             </span>
 
             {hasDiscount && (
-              <span className="text-sm text-primary/60 line-through">
+              <span className="text-xs sm:text-sm lg:text-base text-primary/60 line-through">
                 {formatPrice(parfum.price)}
               </span>
             )}
           </div>
         </div>
 
-        {/* Add to Cart Button */}
+        {/* Add to Cart Button - Responsive text and padding */}
         <motion.button
           onClick={() => addToCart(parfum)}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="w-full bg-primary text-background py-2 rounded-xl font-semibold hover:bg-primary/90 transition-all duration-300 flex items-center justify-center space-x-2"
+          className="w-full bg-primary text-background py-2 px-2 sm:px-3 rounded-xl font-semibold hover:bg-primary/90 transition-all duration-300 flex items-center justify-center space-x-1 sm:space-x-2 mt-auto"
         >
-          <ShoppingCart className="w-4 h-4" />
-          <span>Ajouter au panier</span>
+          <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4" />
+          <span className="truncate text-sm md:text-base lg:text-lg">
+            Ajouter
+          </span>
         </motion.button>
       </div>
     </motion.div>
