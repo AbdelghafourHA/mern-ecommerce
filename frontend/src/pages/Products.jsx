@@ -451,33 +451,33 @@ const ProductCard = ({ product, formatPrice, calculateFinalPrice }) => {
           />
 
           {/* Top Badges - Responsive positioning */}
-          <div className="absolute top-2 right-2 bg-secondary text-primary px-2 py-1 rounded-full text-[10px] xs:text-xs font-semibold">
+          <div className="absolute top-2 right-2 bg-secondary text-primary px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold">
             {product.category}
           </div>
-          <div className="absolute top-2 left-2 bg-accent text-primary px-2 py-1 rounded-full text-[10px] xs:text-xs font-semibold capitalize">
+          <div className="absolute top-2 left-2 bg-accent text-primary px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold capitalize">
             {product.gender}
           </div>
 
           {/* Discount Badge - Responsive size */}
           {hasDiscount && (
-            <div className="absolute top-10 left-2 bg-red-500 text-white px-2 py-1 rounded-full text-[10px] xs:text-xs font-bold">
+            <div className="absolute top-10 left-2 bg-red-500 text-white px-2 py-1 rounded-full text-[10px] sm:text-xs font-bold">
               -{product.discount}%
             </div>
           )}
         </div>
       </Link>
 
-      <div className="p-3 sm:p-4 flex flex-col flex-grow">
+      <div className="p-3 sm:p-4 flex flex-col grow">
         {/* Product Title - Responsive text size and line clamp */}
-        <h3 className="text-xs xs:text-sm sm:text-base font-semibold text-primary mb-2 sm:mb-3 line-clamp-2 min-h-[2.5em]">
+        <h3 className="text-sm sm:text-base font-semibold text-primary mb-2 sm:mb-3 line-clamp-2 min-h-[2.5em]">
           {product.title}
         </h3>
 
         {/* Price Display - Clean and Professional with responsive sizing */}
-        <div className="mb-3 flex-grow">
-          <div className="flex items-center space-x-1 xs:space-x-2 flex-wrap">
+        <div className="mb-3 grow">
+          <div className="flex items-center space-x-1 sm:space-x-2 flex-wrap">
             <span
-              className={`text-sm xs:text-base sm:text-lg font-bold ${
+              className={`text-sm sm:text-base lg:text-lg font-bold ${
                 hasDiscount ? "text-red-600" : "text-secondary"
               }`}
             >
@@ -485,7 +485,7 @@ const ProductCard = ({ product, formatPrice, calculateFinalPrice }) => {
             </span>
 
             {hasDiscount && (
-              <span className="text-xs xs:text-sm text-primary/60 line-through">
+              <span className="text-xs sm:text-sm lg:text-base text-primary/60 line-through">
                 {formatPrice(product.price)}
               </span>
             )}
@@ -497,10 +497,12 @@ const ProductCard = ({ product, formatPrice, calculateFinalPrice }) => {
           onClick={() => addToCart(product)}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="w-full bg-primary text-background py-2 px-2 xs:px-3 rounded-xl font-semibold hover:bg-primary/90 transition-all duration-300 flex items-center justify-center space-x-1 xs:space-x-2 text-xs xs:text-sm sm:text-base mt-auto"
+          className="w-full bg-primary text-background py-2 px-2 sm:px-3 rounded-xl font-semibold hover:bg-primary/90 transition-all duration-300 flex items-center justify-center space-x-1 sm:space-x-2 mt-auto"
         >
-          <ShoppingCart className="w-3 h-3 xs:w-4 xs:h-4" />
-          <span className="truncate text-sm md:text-base">Ajouter</span>
+          <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4" />
+          <span className="truncate text-sm md:text-base lg:text-lg">
+            Ajouter
+          </span>
         </motion.button>
       </div>
     </motion.div>

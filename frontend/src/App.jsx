@@ -34,6 +34,7 @@ const App = () => {
       <Cart />
       <ScrollToTopButton />
       <ScrollProgressBar />
+      <ScrollToTop />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/products" element={<Products />} />
