@@ -10,12 +10,39 @@ import {
   Heart,
   LayoutDashboard,
   Home,
+  Facebook,
+  Instagram,
 } from "lucide-react";
 import Logo from "../assets/Logo01.png";
 import { useCart } from "../../contexts/CartContext";
 import { useCartStore } from "../stores/useCartStore";
 
 const Navbar = () => {
+  const socialMedia = [
+    {
+      name: "Facebook",
+      url: "https://www.facebook.com/share/1CactdLs66/",
+      icon: <Facebook className="w-4 h-4 sm:w-5 sm:h-5" />,
+    },
+    {
+      name: "Instagram",
+      url: "https://www.instagram.com/mounir_fragrance/",
+      icon: <Instagram className="w-4 h-4 sm:w-5 sm:h-5" />,
+    },
+    {
+      name: "TikTok",
+      url: "https://www.tiktok.com/@mounir.fragrance",
+      icon: (
+        <svg
+          className="w-4 h-4 sm:w-5 sm:h-5"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
+          <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" />
+        </svg>
+      ),
+    },
+  ];
   const { cart } = useCartStore();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -202,7 +229,7 @@ const Navbar = () => {
             >
               <div className="p-6 h-full flex flex-col">
                 {/* Mobile Header with Close Button */}
-                <div className="flex justify-between items-center mb-8 ">
+                <div className="flex justify-between items-center mb-16">
                   <img src={Logo} alt="Logo" className="h-10" />
                   <motion.button
                     whileHover={{ scale: 1.1 }}
@@ -221,6 +248,15 @@ const Navbar = () => {
                   animate="visible"
                   className="space-y-6 flex-1 flex flex-col pb-8"
                 >
+                  <motion.li variants={itemVariants} className="text-start">
+                    <Link
+                      onClick={() => setIsOpen(false)}
+                      to={`/products`}
+                      className="w-full text-start text-2xl font-semibold text-primary hover:text-secondary transition-colors py-4 px-4 rounded-lg hover:bg-secondary/5"
+                    >
+                      Collections
+                    </Link>
+                  </motion.li>
                   {navItems.map((item) => (
                     <motion.li
                       key={item.name}
@@ -237,6 +273,21 @@ const Navbar = () => {
                     </motion.li>
                   ))}
                 </motion.ul>
+                <div className="flex justify-center space-x-3">
+                  {socialMedia.map((social, index) => (
+                    <motion.a
+                      key={social.name}
+                      href={social.url}
+                      whileHover={{ scale: 1.1, y: -2 }}
+                      whileTap={{ scale: 0.9 }}
+                      className={`bg-secondary/10 text-primary p-2 md:p-3 rounded-xl hover:bg-secondary hover:text-primary transition-all duration-300`}
+                      aria-label={social.name}
+                      target="_blank"
+                    >
+                      {social.icon}
+                    </motion.a>
+                  ))}
+                </div>
               </div>
             </motion.div>
           </>

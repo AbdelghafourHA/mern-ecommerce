@@ -18,7 +18,7 @@ const Products = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedGenders, setSelectedGenders] = useState([]);
-  const [priceRange, setPriceRange] = useState([0, 50000]);
+  const [priceRange, setPriceRange] = useState([0, 100000]);
   const [priceSort, setPriceSort] = useState("none");
   const [currentPage, setCurrentPage] = useState(1);
   const productsPerPage = 10;
@@ -223,7 +223,7 @@ const Products = () => {
             <Filter size={18} />
             <span>Filtres Avancés</span>
             {(selectedGenders.length > 0 ||
-              priceRange[1] < 50000 ||
+              priceRange[1] < 100000 ||
               priceSort !== "none") && (
               <span className="bg-secondary text-primary w-5 h-5 rounded-full text-xs flex items-center justify-center font-bold">
                 !
@@ -247,7 +247,7 @@ const Products = () => {
                 !selectedCategories.includes("all") &&
                 ` • ${selectedCategories.join(", ")}`}
               {selectedGenders.length > 0 && ` • ${selectedGenders.join(", ")}`}
-              {priceRange[1] < 50000 &&
+              {priceRange[1] < 100000 &&
                 ` • Jusqu'à ${formatPrice(priceRange[1])}`}
               {priceSort !== "none" &&
                 ` • Tri par prix ${
@@ -397,7 +397,7 @@ const Products = () => {
               onClick={() => {
                 setSelectedCategories(["all"]);
                 setSelectedGenders([]);
-                setPriceRange([0, 50000]);
+                setPriceRange([0, 100000]);
                 setPriceSort("none");
               }}
               className="bg-accent text-primary px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 text-sm sm:text-base"
@@ -651,7 +651,7 @@ const FilterSidebar = ({
                   <input
                     type="range"
                     min="0"
-                    max="50000"
+                    max="100000"
                     step="1000"
                     value={priceRange[1]}
                     onChange={(e) =>
@@ -661,7 +661,7 @@ const FilterSidebar = ({
                   />
                   <div className="flex justify-between text-primary/80 text-sm sm:text-base">
                     <span>{formatPrice(0)}</span>
-                    <span>{formatPrice(50000)}</span>
+                    <span>{formatPrice(100000)}</span>
                   </div>
                 </div>
               </div>
@@ -685,7 +685,7 @@ const FilterSidebar = ({
                   whileTap={{ scale: 0.98 }}
                   onClick={() => {
                     setSelectedGenders([]);
-                    setPriceRange([0, 50000]);
+                    setPriceRange([0, 100000]);
                     setPriceSort("none");
                   }}
                   className="w-full border border-primary/20 text-primary py-2 sm:py-3 rounded-xl font-semibold hover:border-secondary hover:text-secondary transition-all duration-300 text-sm sm:text-base"

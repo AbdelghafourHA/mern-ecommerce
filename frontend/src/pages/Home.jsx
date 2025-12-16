@@ -137,7 +137,7 @@ const Home = () => {
                         {category.subcategories.map((subcat) => (
                           <span
                             key={subcat}
-                            className="bg-secondary text-primary px-2 py-1 rounded-full text-xs font-semibold"
+                            className="bg-secondary text-primary px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold"
                           >
                             {subcat}
                           </span>
