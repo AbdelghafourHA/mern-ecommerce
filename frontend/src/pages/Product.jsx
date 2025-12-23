@@ -199,10 +199,10 @@ const Product = () => {
           <div className="costum-section">
             <button
               onClick={() => navigate(-1)}
-              className="cursor-pointer flex items-center space-x-2 text-primary hover:text-secondary transition-colors font-bold01 text-sm sm:text-base"
+              className="cursor-pointer flex items-center space-x-2 text-primary hover:text-secondary transition-colors text-sm sm:text-base"
             >
               <ArrowLeft size={18} className="sm:w-5 sm:h-5" />
-              <span>Retour</span>
+              <span className="font-p01 font-bold">Retour</span>
             </button>
           </div>
         </header>
@@ -247,7 +247,7 @@ const Product = () => {
             className="cursor-pointer flex items-center space-x-2 text-primary hover:text-secondary transition-colors font-bold01 text-sm sm:text-base"
           >
             <ArrowLeft size={18} className="sm:w-5 sm:h-5" />
-            <span>Retour</span>
+            <span className="font-p01 font-semibold">Retour</span>
           </button>
         </div>
       </motion.header>
@@ -336,15 +336,6 @@ const Product = () => {
                     </motion.button>
                   ))}
                 </div>
-                {product.defaultVolume &&
-                  selectedSize === product.defaultVolume && (
-                    <p className="text-primary/60 text-sm">
-                      <span className="bg-secondary/20 text-secondary px-2 py-0.5 rounded text-xs font-semibold mr-2">
-                        Par défaut
-                      </span>
-                      Cette taille est sélectionnée par défaut
-                    </p>
-                  )}
               </div>
             )}
 
@@ -442,18 +433,6 @@ const Product = () => {
               </h3>
               <p className="text-base sm:text-lg text-primary/80 font-p01 leading-relaxed">
                 {product.description || "Aucune description disponible."}
-                {isDecant && (
-                  <>
-                    <br />
-                    <br />
-                    <span className="font-semibold">
-                      Note sur les Decants:
-                    </span>{" "}
-                    Il s'agit d'un échantillon du parfum original conditionné
-                    dans un flacon de {selectedSize || "10ml"}. Parfait pour
-                    tester le parfum avant d'acheter la bouteille complète.
-                  </>
-                )}
               </p>
             </div>
 
@@ -500,7 +479,9 @@ const Product = () => {
                     : ""
                 }`}
               >
-                <span>Ajouter au Panier</span>
+                <span className="font-p01 font-semibold">
+                  Ajouter au Panier
+                </span>
                 {isDecant && selectedSize && (
                   <span className="bg-secondary/20 text-secondary px-2 py-0.5 rounded text-xs font-semibold">
                     {selectedSize}
@@ -519,7 +500,9 @@ const Product = () => {
                     : ""
                 }`}
               >
-                <span>Acheter Maintenant</span>
+                <span className="font-p01 font-semibold">
+                  Acheter Maintenant
+                </span>
                 {isDecant && selectedSize && (
                   <span className="bg-secondary/20 text-secondary px-2 py-0.5 rounded text-xs font-semibold">
                     {selectedSize}

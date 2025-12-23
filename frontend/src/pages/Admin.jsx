@@ -562,9 +562,7 @@ const ProductsManager = ({ formatPrice }) => {
                   Catégorie
                 </th>
                 <th className="text-left py-3 px-4 text-primary font-bold01 text-sm">
-                  {products.some((p) => p.category === "Decants")
-                    ? "Prix (10ml)"
-                    : "Prix"}
+                  Prix
                 </th>
                 <th className="text-left py-3 px-4 text-primary font-bold01 text-sm">
                   Discount
@@ -630,7 +628,7 @@ const ProductsManager = ({ formatPrice }) => {
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      <div className="font-semibold text-primary font-bold01 text-sm">
+                      <div className="font-semibold text-primary font-p01 text-sm">
                         {formatPrice(displayPrice)}
                         {product.category === "Decants" && (
                           <span className="text-xs text-primary/60 block">
@@ -660,7 +658,7 @@ const ProductsManager = ({ formatPrice }) => {
                     <td className="py-3 px-4">
                       <div className="space-y-1">
                         <div
-                          className={`font-semibold font-bold01 text-sm ${
+                          className={`font-semibold font-p01 text-sm ${
                             product.discount > 0
                               ? "text-green-600"
                               : "text-primary"
@@ -669,7 +667,7 @@ const ProductsManager = ({ formatPrice }) => {
                           {formatPrice(finalPrice)}
                         </div>
                         {savings > 0 && (
-                          <div className="text-xs text-red-600 font-bold01">
+                          <div className="text-xs text-red-600 font-p01">
                             -{formatPrice(savings)}
                           </div>
                         )}
