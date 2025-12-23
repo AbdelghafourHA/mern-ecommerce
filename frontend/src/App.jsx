@@ -18,6 +18,7 @@ import { useAdminStore } from "./stores/useAdminStore.js";
 import LoadingSpinner from "./components/LoadingSpinner";
 import ScrollToTopButton from "./components/ScrollToTopButton.jsx";
 import ScrollProgressBar from "./components/ScrollProgressBar .jsx";
+import Decants from "./pages/Decants.jsx";
 
 const App = () => {
   const { user, checkAuth, checkingAuth } = useAdminStore();
@@ -41,6 +42,7 @@ const App = () => {
         <Route path="/category/perfumes" element={<Perfumes />} />
         <Route path="/category/cosmetics" element={<Cosmetics />} />
         <Route path="/category/gifts" element={<Gifts />} />
+        <Route path="/category/perfumes/decants" element={<Decants />} />
         <Route path="/admin" element={!user ? <LoginAdmin /> : <Admin />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/products/:productId" element={<Product />} />

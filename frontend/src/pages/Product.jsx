@@ -11,12 +11,25 @@ const Product = () => {
   const { getProductById, product, loading } = useProductStore();
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
+  const [selectedSize, setSelectedSize] = useState(""); // حالة الحجم المختار
 
   useEffect(() => {
     if (productId) {
       getProductById(productId);
     }
   }, [productId, getProductById]);
+
+  // Initialize selected size when product loads
+  useEffect(() => {
+    if (product && product.category === "Decants") {
+      // Set default to product.defaultVolume or first available size
+      const defaultSize =
+        product.defaultVolume ||
+        (product.availableSizes && product.availableSizes[0]) ||
+        "10ml";
+      setSelectedSize(defaultSize);
+    }
+  }, [product]);
 
   const formatPrice = (price) => {
     if (!price) return "0 DA";
@@ -25,23 +38,58 @@ const Product = () => {
 
   const { addToCartWithQuantity } = useCartStore();
 
+  // Calculate unit price based on selected size and volume pricing
+  const calculateUnitPrice = () => {
+    if (!product || !product.price) return 0;
+
+    let price = product.price;
+
+    // For decants, use volume pricing if available
+    if (
+      product.category === "Decants" &&
+      selectedSize &&
+      product.volumePricing
+    ) {
+      // Convert Map to object if needed
+      const volumePricing =
+        product.volumePricing instanceof Map
+          ? Object.fromEntries(product.volumePricing)
+          : product.volumePricing;
+
+      // Get price for selected volume
+      const volumePrice = volumePricing?.[selectedSize];
+      if (volumePrice) {
+        price = volumePrice;
+      }
+    }
+
+    // Apply discount if any
+    if (product.discount > 0) {
+      return product.newPrice > 0
+        ? product.newPrice
+        : Math.round(price * (1 - product.discount / 100));
+    }
+
+    return price;
+  };
+
   // Direct checkout - only this product
   const handleBuyNow = () => {
     if (!product) return;
 
-    // Calculate unit price with discount
-    const unitPrice =
-      product.discount > 0
-        ? product.newPrice > 0
-          ? product.newPrice
-          : Math.round(product.price * (1 - product.discount / 100))
-        : product.price;
+    // Calculate unit price with discount and size
+    const unitPrice = calculateUnitPrice();
 
     // Create a temporary cart with ONLY this product and quantity
     const checkoutProduct = {
       ...product,
       quantity: quantity,
       unitPrice: unitPrice,
+      selectedSize: product.category === "Decants" ? selectedSize : null,
+      // ADD VOLUME TO THE PRODUCT DATA
+      volume: product.category === "Decants" ? selectedSize : null,
+      // Store the actual price used
+      price: unitPrice,
     };
 
     // Calculate total
@@ -64,32 +112,71 @@ const Product = () => {
   // Normal add to cart - adds to existing cart
   const handleAddToCart = () => {
     if (!product) return;
-    addToCartWithQuantity(product, quantity);
+
+    // Calculate unit price with discount and size
+    const unitPrice = calculateUnitPrice();
+
+    // Prepare product data with size if it's a decant
+    const productToAdd = {
+      ...product,
+      selectedSize: product.category === "Decants" ? selectedSize : null,
+      // ADD VOLUME TO THE CART ITEM
+      volume: product.category === "Decants" ? selectedSize : null,
+      // ADD THE CALCULATED UNIT PRICE
+      originalPrice: product.price, // Keep original price for reference
+      price: unitPrice, // Use the calculated price based on size
+    };
+
+    addToCartWithQuantity(productToAdd, quantity);
   };
 
   // Calculate total price for display
   const calculateTotalPrice = () => {
-    if (!product || !product.price) return 0;
-    // Use discounted price if available
-    const unitPrice =
-      product.discount > 0
-        ? product.newPrice > 0
-          ? product.newPrice
-          : Math.round(product.price * (1 - product.discount / 100))
-        : product.price;
-
-    return unitPrice * quantity;
+    if (!product) return 0;
+    return calculateUnitPrice() * quantity;
   };
 
-  // Calculate unit price
-  const calculateUnitPrice = () => {
-    if (!product || !product.price) return 0;
+  // Get available sizes from product data
+  const getAvailableSizes = () => {
+    if (product?.category === "Decants") {
+      return product.availableSizes || ["10ml", "20ml", "30ml"];
+    }
+    return [];
+  };
 
-    return product.discount > 0
-      ? product.newPrice > 0
-        ? product.newPrice
-        : Math.round(product.price * (1 - product.discount / 100))
-      : product.price;
+  // Get price for a specific volume (for display)
+  const getVolumePrice = (size) => {
+    if (!product || !product.volumePricing || product.category !== "Decants") {
+      return calculateUnitPrice();
+    }
+
+    // Handle both Map and object formats
+    let volumePricing;
+    if (
+      product.volumePricing instanceof Map ||
+      product.volumePricing[Symbol.iterator]
+    ) {
+      try {
+        volumePricing = Object.fromEntries(product.volumePricing);
+      } catch {
+        volumePricing = {};
+      }
+    } else {
+      volumePricing = product.volumePricing || {};
+    }
+
+    const volumePrice = volumePricing[size];
+    if (volumePrice) {
+      // Apply discount if any
+      if (product.discount > 0) {
+        return product.newPrice > 0
+          ? product.newPrice
+          : Math.round(volumePrice * (1 - product.discount / 100));
+      }
+      return volumePrice;
+    }
+
+    return calculateUnitPrice();
   };
 
   // Show loading state
@@ -143,6 +230,8 @@ const Product = () => {
   const unitPrice = calculateUnitPrice();
   const totalPrice = calculateTotalPrice();
   const hasDiscount = product.discount > 0;
+  const isDecant = product.category === "Decants";
+  const availableSizes = getAvailableSizes();
 
   return (
     <div className="min-h-screen bg-background">
@@ -193,6 +282,11 @@ const Product = () => {
             {/* Product Title */}
             <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold01 text-primary leading-tight">
               {product.title || "Nom du produit non disponible"}
+              {isDecant && selectedSize && (
+                <span className="text-xl sm:text-2xl text-primary/70 ml-2">
+                  ({selectedSize})
+                </span>
+              )}
             </h1>
 
             {/* Category & Gender Badges */}
@@ -214,28 +308,120 @@ const Product = () => {
               )}
             </div>
 
+            {/* Size Selector for Decants */}
+            {isDecant && (
+              <div className="space-y-3 sm:space-y-4 pt-2">
+                <h3 className="text-lg sm:text-xl font-bold01 text-primary">
+                  Sélectionner la taille:
+                </h3>
+                <div className="flex flex-wrap gap-2 sm:gap-3">
+                  {availableSizes.map((size) => (
+                    <motion.button
+                      key={size}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setSelectedSize(size)}
+                      className={`cursor-pointer px-4 sm:px-5 py-2 sm:py-3 rounded-lg font-semibold transition-all duration-300 border text-sm sm:text-base ${
+                        selectedSize === size
+                          ? "bg-primary text-background border-primary"
+                          : "bg-background text-primary border-primary/20 hover:border-primary"
+                      }`}
+                    >
+                      {size}
+                      {isDecant && product.volumePricing && (
+                        <span className="block text-xs mt-1 opacity-75">
+                          {formatPrice(getVolumePrice(size))}
+                        </span>
+                      )}
+                    </motion.button>
+                  ))}
+                </div>
+                {product.defaultVolume &&
+                  selectedSize === product.defaultVolume && (
+                    <p className="text-primary/60 text-sm">
+                      <span className="bg-secondary/20 text-secondary px-2 py-0.5 rounded text-xs font-semibold mr-2">
+                        Par défaut
+                      </span>
+                      Cette taille est sélectionnée par défaut
+                    </p>
+                  )}
+              </div>
+            )}
+
             {/* Price Display */}
             <div className="space-y-3">
               <div className="flex items-center gap-3 flex-wrap">
                 {/* Current Price */}
                 <span className="text-xl sm:text-2xl lg:text-3xl font-p01 text-secondary font-bold">
                   {formatPrice(unitPrice)}
+                  {isDecant && selectedSize && (
+                    <span className="text-lg sm:text-xl text-primary/60 ml-2">
+                      /{selectedSize}
+                    </span>
+                  )}
                 </span>
 
                 {/* Original Price if discounted */}
                 {hasDiscount && (
                   <span className="text-lg sm:text-xl text-primary/60 line-through">
-                    {formatPrice(product.price)}
+                    {formatPrice(
+                      isDecant && selectedSize && product.volumePricing
+                        ? (() => {
+                            // Handle both Map and object formats
+                            let volumePricing;
+                            if (
+                              product.volumePricing instanceof Map ||
+                              product.volumePricing[Symbol.iterator]
+                            ) {
+                              try {
+                                volumePricing = Object.fromEntries(
+                                  product.volumePricing
+                                );
+                              } catch {
+                                volumePricing = {};
+                              }
+                            } else {
+                              volumePricing = product.volumePricing || {};
+                            }
+                            return volumePricing[selectedSize] || product.price;
+                          })()
+                        : product.price
+                    )}
+                    {isDecant && selectedSize && (
+                      <span className="text-sm ml-1">/{selectedSize}</span>
+                    )}
                   </span>
                 )}
               </div>
+
+              {/* Size-based pricing info for decants */}
+              {isDecant && product.volumePricing && (
+                <div className="bg-accent/10 p-3 sm:p-4 rounded-xl border border-accent/20">
+                  <p className="text-sm sm:text-base text-primary/70">
+                    <span className="font-semibold">Tarification:</span> Chaque
+                    taille a son propre prix.
+                    {selectedSize && (
+                      <>
+                        <br />
+                        <span className="font-semibold">
+                          Taille sélectionnée:
+                        </span>{" "}
+                        <span className="bg-secondary/20 text-secondary px-2 py-0.5 rounded text-xs font-semibold">
+                          {selectedSize}
+                        </span>
+                      </>
+                    )}
+                  </p>
+                </div>
+              )}
 
               {/* Total Price for Quantity */}
               {quantity > 1 && (
                 <div className="bg-primary/5 p-3 sm:p-4 rounded-xl">
                   <div className="text-sm sm:text-base text-primary/70 mb-1">
                     <span className="font-semibold">
-                      Total ({quantity} articles):
+                      Total ({quantity} {quantity > 1 ? "articles" : "article"}
+                      ):
                     </span>
                   </div>
                   <div className="text-lg sm:text-xl font-bold text-secondary">
@@ -243,6 +429,7 @@ const Product = () => {
                   </div>
                   <div className="text-xs sm:text-sm text-primary/60 mt-1">
                     {quantity} × {formatPrice(unitPrice)}
+                    {isDecant && selectedSize && ` (${selectedSize} chacun)`}
                   </div>
                 </div>
               )}
@@ -255,6 +442,18 @@ const Product = () => {
               </h3>
               <p className="text-base sm:text-lg text-primary/80 font-p01 leading-relaxed">
                 {product.description || "Aucune description disponible."}
+                {isDecant && (
+                  <>
+                    <br />
+                    <br />
+                    <span className="font-semibold">
+                      Note sur les Decants:
+                    </span>{" "}
+                    Il s'agit d'un échantillon du parfum original conditionné
+                    dans un flacon de {selectedSize || "10ml"}. Parfait pour
+                    tester le parfum avant d'acheter la bouteille complète.
+                  </>
+                )}
               </p>
             </div>
 
@@ -294,30 +493,49 @@ const Product = () => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleAddToCart}
-                className="cursor-pointer flex-1 border-2 border-primary text-primary py-3 sm:py-4 rounded-xl font-bold01 text-sm sm:text-base hover:bg-primary hover:text-background transition-all duration-300 flex items-center justify-center gap-3"
+                disabled={isDecant && !selectedSize}
+                className={`cursor-pointer flex-1 border-2 border-primary text-primary py-3 sm:py-4 rounded-xl font-bold01 text-sm sm:text-base hover:bg-primary hover:text-background transition-all duration-300 flex items-center justify-center gap-3 ${
+                  isDecant && !selectedSize
+                    ? "opacity-50 cursor-not-allowed"
+                    : ""
+                }`}
               >
                 <span>Ajouter au Panier</span>
-                {quantity > 1 && (
-                  <span className="bg-primary text-background px-2 py-1 rounded-full text-xs font-bold">
-                    {quantity}
+                {isDecant && selectedSize && (
+                  <span className="bg-secondary/20 text-secondary px-2 py-0.5 rounded text-xs font-semibold">
+                    {selectedSize}
                   </span>
                 )}
               </motion.button>
 
               <motion.button
                 onClick={handleBuyNow}
+                disabled={isDecant && !selectedSize}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="cursor-pointer flex-1 bg-secondary text-primary py-3 sm:py-4 rounded-xl font-bold01 text-sm sm:text-base hover:shadow-lg hover:bg-secondary/90 transition-all duration-300 flex items-center justify-center gap-3"
+                className={`cursor-pointer flex-1 bg-secondary text-primary py-3 sm:py-4 rounded-xl font-bold01 text-sm sm:text-base hover:shadow-lg hover:bg-secondary/90 transition-all duration-300 flex items-center justify-center gap-3 ${
+                  isDecant && !selectedSize
+                    ? "opacity-50 cursor-not-allowed"
+                    : ""
+                }`}
               >
                 <span>Acheter Maintenant</span>
-                {quantity > 1 && (
-                  <span className="bg-primary text-background px-2 py-1 rounded-full text-xs font-bold">
-                    {quantity}
+                {isDecant && selectedSize && (
+                  <span className="bg-secondary/20 text-secondary px-2 py-0.5 rounded text-xs font-semibold">
+                    {selectedSize}
                   </span>
                 )}
               </motion.button>
             </div>
+
+            {/* Size Requirement Notice */}
+            {isDecant && !selectedSize && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-600 text-sm sm:text-base">
+                  ⚠️ Veuillez sélectionner une taille avant d'ajouter au panier.
+                </p>
+              </div>
+            )}
           </div>
         </motion.div>
       </section>

@@ -12,6 +12,7 @@ import {
   Home,
   Facebook,
   Instagram,
+  ChevronDown,
 } from "lucide-react";
 import Logo from "../assets/Logo01.png";
 import { useCart } from "../../contexts/CartContext";
@@ -43,20 +44,30 @@ const Navbar = () => {
       ),
     },
   ];
-  const { cart } = useCartStore();
 
+  const { cart } = useCartStore();
   const [isOpen, setIsOpen] = useState(false);
+  const [perfumesDropdownOpen, setPerfumesDropdownOpen] = useState(false);
   const { setIsCartOpen } = useCart();
 
-  const navItems = [
-    { name: "Parfums", link: "perfumes" },
+  const mainNavItems = [
+    {
+      name: "Parfums",
+      type: "dropdown",
+      items: [
+        { name: "Parfums", link: "category/perfumes" },
+        { name: "Decants", link: "category/perfumes/decants" },
+      ],
+    },
     {
       name: "Cosmétiques",
-      link: "cosmetics",
+      type: "link",
+      link: "category/cosmetics",
     },
     {
       name: "Cadeaux",
-      link: "gifts",
+      type: "link",
+      link: "category/gifts",
     },
   ];
 
@@ -102,6 +113,23 @@ const Navbar = () => {
     },
   };
 
+  const dropdownVariants = {
+    hidden: {
+      opacity: 0,
+      y: -10,
+      transition: {
+        duration: 0.2,
+      },
+    },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.2,
+      },
+    },
+  };
+
   return (
     <>
       <motion.nav
@@ -130,21 +158,68 @@ const Navbar = () => {
                 animate="visible"
                 className="flex space-x-8"
               >
-                {navItems.map((item) => (
+                {mainNavItems.map((item) => (
                   <motion.li
                     key={item.name}
                     variants={itemVariants}
                     className="relative"
                   >
-                    <Link to={`/category/${item.link}`}>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        className={` font-medium transition-colors duration-300 cursor-pointer text-lg
-                        text-background hover:text-secondary`}
+                    {item.type === "dropdown" ? (
+                      // Dropdown for Parfums
+                      <div
+                        className="relative"
+                        onMouseEnter={() => setPerfumesDropdownOpen(true)}
+                        onMouseLeave={() => setPerfumesDropdownOpen(false)}
                       >
-                        {item.name}
-                      </motion.button>
-                    </Link>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          className={`flex items-center space-x-1 font-medium transition-colors duration-300 cursor-pointer text-lg text-background hover:text-secondary`}
+                        >
+                          <span>{item.name}</span>
+                          <ChevronDown
+                            size={16}
+                            className={`transition-transform duration-300 ${
+                              perfumesDropdownOpen ? "rotate-180" : ""
+                            }`}
+                          />
+                        </motion.button>
+
+                        {/* Dropdown Menu */}
+                        <AnimatePresence>
+                          {perfumesDropdownOpen && (
+                            <motion.div
+                              variants={dropdownVariants}
+                              initial="hidden"
+                              animate="visible"
+                              exit="hidden"
+                              className="absolute left-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-primary/10 overflow-hidden"
+                            >
+                              <div className="py-2">
+                                {item.items.map((subItem) => (
+                                  <Link
+                                    key={subItem.name}
+                                    to={`/${subItem.link}`}
+                                    className="block px-4 py-3 text-primary hover:bg-secondary/10 hover:text-secondary transition-colors"
+                                  >
+                                    {subItem.name}
+                                  </Link>
+                                ))}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    ) : (
+                      // Regular link
+                      <Link to={`/${item.link}`}>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          className={`font-medium transition-colors duration-300 cursor-pointer text-lg text-background hover:text-secondary`}
+                        >
+                          {item.name}
+                        </motion.button>
+                      </Link>
+                    )}
                   </motion.li>
                 ))}
               </motion.ul>
@@ -152,7 +227,7 @@ const Navbar = () => {
 
             {/* Right Side Icons */}
             <div className="flex items-center space-x-4">
-              {/* Home icon  */}
+              {/* Home icon */}
               <Link to="/">
                 <motion.button
                   whileHover={{ scale: 1.1 }}
@@ -163,8 +238,7 @@ const Navbar = () => {
                 </motion.button>
               </Link>
 
-              {/* Dashboard  */}
-
+              {/* Dashboard */}
               <Link to="/admin">
                 <motion.button
                   whileHover={{ scale: 1.1 }}
@@ -246,18 +320,41 @@ const Navbar = () => {
                   variants={containerVariants}
                   initial="hidden"
                   animate="visible"
-                  className="space-y-6 flex-1 flex flex-col pb-8"
+                  className="space-y-2 flex-1 flex flex-col pb-8"
                 >
                   <motion.li variants={itemVariants} className="text-start">
                     <Link
                       onClick={() => setIsOpen(false)}
-                      to={`/products`}
+                      to="/products"
                       className="w-full text-start text-2xl font-semibold text-primary hover:text-secondary transition-colors py-4 px-4 rounded-lg hover:bg-secondary/5"
                     >
                       Collections
                     </Link>
                   </motion.li>
-                  {navItems.map((item) => (
+
+                  {/* Mobile version for Parfums with sub-items */}
+                  <motion.li variants={itemVariants} className="text-start">
+                    <div className="space-y-2">
+                      <Link
+                        onClick={() => setIsOpen(false)}
+                        to="/category/perfumes"
+                        className="w-full text-start text-2xl font-semibold text-primary hover:text-secondary transition-colors py-4 px-4 rounded-lg hover:bg-secondary/5"
+                      >
+                        Parfums
+                      </Link>
+                      <Link
+                        onClick={() => setIsOpen(false)}
+                        to="/category/perfumes/decants"
+                        className="w-full text-start text-xl font-medium text-primary/80 hover:text-secondary transition-colors py-3 px-8 rounded-lg hover:bg-secondary/5 flex items-center"
+                      >
+                        <span className="ml-2">•</span>
+                        <span className="ml-2">Decants</span>
+                      </Link>
+                    </div>
+                  </motion.li>
+
+                  {/* Other categories */}
+                  {mainNavItems.slice(1).map((item) => (
                     <motion.li
                       key={item.name}
                       variants={itemVariants}
@@ -265,7 +362,7 @@ const Navbar = () => {
                     >
                       <Link
                         onClick={() => setIsOpen(false)}
-                        to={`/category/${item.link}`}
+                        to={`/${item.link}`}
                         className="w-full text-start text-2xl font-semibold text-primary hover:text-secondary transition-colors py-4 px-4 rounded-lg hover:bg-secondary/5"
                       >
                         {item.name}
@@ -273,6 +370,7 @@ const Navbar = () => {
                     </motion.li>
                   ))}
                 </motion.ul>
+
                 <div className="flex justify-center space-x-3">
                   {socialMedia.map((social, index) => (
                     <motion.a

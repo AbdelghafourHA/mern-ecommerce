@@ -12,7 +12,12 @@ export const createCheckout = async (req, res) => {
 
 export const getAllCheckouts = async (req, res) => {
   try {
-    const checkouts = await Checkout.find({});
+    const checkouts = await Checkout.find({})
+      .populate({
+        path: "orderItems.product",
+        select: "title category volumePricing availableSizes",
+      })
+      .sort({ createdAt: -1 });
     res.json(checkouts);
   } catch (error) {
     res.status(500).json({ error: error.message });

@@ -42,8 +42,22 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // ADD VOLUME PRICING FOR DECANTS
+    volumePricing: {
+      type: Map,
+      of: Number, // e.g., { "10ml": 1500, "20ml": 2500, "30ml": 3500 }
+      default: {},
+    },
+    availableSizes: {
+      type: [String],
+      default: ["10ml", "20ml", "30ml"], // Default sizes for decants
+    },
+    defaultVolume: {
+      type: String,
+      default: "10ml",
+    },
   },
-  { timestamps: true } // Add timestamps
+  { timestamps: true }
 );
 
 const Product = mongoose.model("Product", productSchema);

@@ -41,7 +41,17 @@ export const getProductsByCategory = async (req, res) => {
 
 export const createProduct = async (req, res) => {
   try {
-    const { title, description, price, image, category, gender } = req.body;
+    const {
+      title,
+      description,
+      price,
+      image,
+      category,
+      gender,
+      volumePricing,
+      availableSizes,
+      defaultVolume,
+    } = req.body;
 
     let cloudinaryResponse = null;
 
@@ -49,6 +59,13 @@ export const createProduct = async (req, res) => {
       cloudinaryResponse = await cloudinary.uploader.upload(image, {
         folder: "products",
       });
+    }
+
+    // Prepare volume pricing for decants
+    let processedVolumePricing = {};
+    if (category === "Decants" && volumePricing) {
+      // Convert volume pricing to Map format
+      processedVolumePricing = volumePricing;
     }
 
     const product = await Product.create({
@@ -60,6 +77,12 @@ export const createProduct = async (req, res) => {
         : "",
       category,
       gender,
+      volumePricing: processedVolumePricing,
+      availableSizes:
+        category === "Decants"
+          ? availableSizes || ["10ml", "20ml", "30ml"]
+          : [],
+      defaultVolume: category === "Decants" ? defaultVolume || "10ml" : null,
     });
 
     res.status(201).json(product);
@@ -102,13 +125,34 @@ export const toggleFeatured = async (req, res) => {
 export const updateProduct = async (req, res) => {
   const { id } = req.params;
   try {
-    const product = await Product.findByIdAndUpdate(id, req.body, {
+    const {
+      category,
+      volumePricing = {},
+      availableSizes = [],
+      defaultVolume = null,
+      ...otherFields
+    } = req.body;
+
+    // Prepare update data
+    const updateData = {
+      ...otherFields,
+      category,
+      // Always include these fields, they will be properly handled by the schema
+      volumePricing: category === "Decants" ? volumePricing : {},
+      availableSizes: category === "Decants" ? availableSizes : [],
+      defaultVolume: category === "Decants" ? defaultVolume : null,
+    };
+
+    // Perform update
+    const product = await Product.findByIdAndUpdate(id, updateData, {
       new: true,
-    }); // { new: true } returns the updated document
+      runValidators: true,
+    });
+
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
-    // await product.save();
+
     res.json(product);
   } catch (error) {
     console.error("Error updating product:", error);
@@ -130,13 +174,11 @@ export const getProductById = async (req, res) => {
   }
 };
 
-// في controllers/productController.js
 export const updateProductDiscount = async (req, res) => {
   try {
     const { productId } = req.params;
     const { discount } = req.body;
 
-    // التحقق من أن التخفيض بين 0 و 100
     if (discount < 0 || discount > 100) {
       return res.status(400).json({
         message: "Le discount doit être entre 0 et 100",
@@ -149,16 +191,16 @@ export const updateProductDiscount = async (req, res) => {
       return res.status(404).json({ message: "Produit non trouvé" });
     }
 
-    // حساب السعر الجديد
+    // Calculate new price based on base price (10ml price for decants)
+    let basePrice = product.price;
     const newPrice =
-      discount > 0 ? product.price * (1 - discount / 100) : product.price;
+      discount > 0 ? Math.round(basePrice * (1 - discount / 100)) : basePrice;
 
-    // تحديث المنتج
     const updatedProduct = await Product.findByIdAndUpdate(
       productId,
       {
         discount,
-        newPrice: Math.round(newPrice), // تقريب السعر
+        newPrice,
       },
       { new: true }
     );
@@ -170,11 +212,10 @@ export const updateProductDiscount = async (req, res) => {
   }
 };
 
-// دالة إضافية لتحديث التخفيض والسعر معاً
 export const updateProductPricing = async (req, res) => {
   try {
     const { productId } = req.params;
-    const { price, discount } = req.body;
+    const { price, discount, volumePricing } = req.body;
 
     const product = await Product.findById(productId);
 
@@ -182,20 +223,34 @@ export const updateProductPricing = async (req, res) => {
       return res.status(404).json({ message: "Produit non trouvé" });
     }
 
-    let newPrice = price;
+    let updateData = {};
 
-    // إذا كان هناك تخفيض، احسب السعر الجديد
-    if (discount > 0) {
-      newPrice = price * (1 - discount / 100);
+    if (price !== undefined) {
+      updateData.price = price;
+    }
+
+    if (discount !== undefined) {
+      if (discount < 0 || discount > 100) {
+        return res.status(400).json({
+          message: "Le discount doit être entre 0 et 100",
+        });
+      }
+      updateData.discount = discount;
+
+      // Calculate new price based on base price
+      const basePrice = price !== undefined ? price : product.price;
+      updateData.newPrice =
+        discount > 0 ? Math.round(basePrice * (1 - discount / 100)) : basePrice;
+    }
+
+    // Update volume pricing for decants
+    if (product.category === "Decants" && volumePricing) {
+      updateData.volumePricing = volumePricing;
     }
 
     const updatedProduct = await Product.findByIdAndUpdate(
       productId,
-      {
-        price,
-        discount: discount || 0,
-        newPrice: Math.round(newPrice),
-      },
+      updateData,
       { new: true }
     );
 
@@ -206,32 +261,27 @@ export const updateProductPricing = async (req, res) => {
   }
 };
 
-// في controllers/productController.js
 export const applyDiscountToAll = async (req, res) => {
   try {
     const { discount, categories } = req.body;
 
-    // التحقق من أن التخفيض بين 0 و 100
     if (discount < 0 || discount > 100) {
       return res.status(400).json({
         message: "Le discount doit être entre 0 et 100",
       });
     }
 
-    // بناء query بناءً على الفئات المحددة
     let query = {};
     if (categories && categories.length > 0) {
       query.category = { $in: categories };
     }
 
-    // جلب المنتجات بناءً على الاستعلام
     const products = await Product.find(query);
 
     if (products.length === 0) {
       return res.status(404).json({ message: "Aucun produit trouvé" });
     }
 
-    // تحديث كل المنتجات
     const updateOperations = products.map((product) => {
       const newPrice =
         discount > 0
@@ -249,10 +299,8 @@ export const applyDiscountToAll = async (req, res) => {
       };
     });
 
-    // تنفيذ جميع عمليات التحديث في قاعدة البيانات
     await Product.bulkWrite(updateOperations);
 
-    // جلب المنتجات المحدثة
     const updatedProducts = await Product.find(query);
 
     res.json({
@@ -265,13 +313,11 @@ export const applyDiscountToAll = async (req, res) => {
   }
 };
 
-// دالة لإزالة التخفيض من جميع المنتجات
 export const removeDiscountFromAll = async (req, res) => {
   try {
     const { categories } = req.body;
 
-    // بناء query بناءً على الفئات المحددة
-    let query = { discount: { $gt: 0 } }; // فقط المنتجات التي لديها تخفيض
+    let query = { discount: { $gt: 0 } };
     if (categories && categories.length > 0) {
       query.category = { $in: categories };
     }
@@ -284,13 +330,12 @@ export const removeDiscountFromAll = async (req, res) => {
         .json({ message: "Aucun produit avec discount trouvé" });
     }
 
-    // إزالة التخفيض من جميع المنتجات
     const updateOperations = products.map((product) => {
       return {
         updateOne: {
           filter: { _id: product._id },
           update: {
-            $unset: { discount: "", newPrice: "" },
+            $set: { discount: 0, newPrice: product.price },
           },
         },
       };
@@ -308,6 +353,48 @@ export const removeDiscountFromAll = async (req, res) => {
     });
   } catch (error) {
     console.error("Error removing discount from all products:", error);
+    res.status(500).json({ message: "Erreur du serveur" });
+  }
+};
+
+// NEW: Get price for specific volume
+export const getVolumePrice = async (req, res) => {
+  try {
+    const { productId, volume } = req.params;
+
+    const product = await Product.findById(productId);
+
+    if (!product) {
+      return res.status(404).json({ message: "Produit non trouvé" });
+    }
+
+    if (product.category !== "Decants") {
+      return res.status(400).json({
+        message: "Volume pricing only available for decants",
+      });
+    }
+
+    // Get price for specific volume
+    const volumePrice = product.volumePricing?.get(volume) || product.price;
+
+    // Apply discount if any
+    let finalPrice = volumePrice;
+    if (product.discount > 0) {
+      finalPrice =
+        product.newPrice > 0
+          ? product.newPrice
+          : Math.round(volumePrice * (1 - product.discount / 100));
+    }
+
+    res.json({
+      volume,
+      basePrice: volumePrice,
+      finalPrice,
+      discount: product.discount,
+      hasDiscount: product.discount > 0,
+    });
+  } catch (error) {
+    console.error("Error getting volume price:", error);
     res.status(500).json({ message: "Erreur du serveur" });
   }
 };

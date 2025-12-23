@@ -12,6 +12,7 @@ import {
   updateProductDiscount,
   applyDiscountToAll,
   removeDiscountFromAll,
+  getVolumePrice,
 } from "../controllers/products.controller.js";
 import { verifyAdmin, adminRoute } from "../middleweres/auth.middleware.js";
 
@@ -40,5 +41,7 @@ router.put(
 
 router.put("/discount/all", verifyAdmin, adminRoute, applyDiscountToAll);
 router.delete("/discount/all", verifyAdmin, adminRoute, removeDiscountFromAll);
+
+router.get("/:productId/volume/:volume", getVolumePrice);
 
 export default router;

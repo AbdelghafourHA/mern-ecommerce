@@ -124,6 +124,12 @@ const Cart = () => {
                               </h3>
                               <p className="text-primary/60 text-xs font-bold01 capitalize mb-2">
                                 {item.gender} • {item.category}
+                                {/* Display volume if it exists */}
+                                {item.volume && (
+                                  <span className="ml-2 bg-secondary/20 text-secondary px-2 py-0.5 rounded text-xs font-semibold">
+                                    {item.volume}
+                                  </span>
+                                )}
                               </p>
 
                               {/* Price & Quantity */}

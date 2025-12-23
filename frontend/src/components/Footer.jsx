@@ -147,6 +147,7 @@ const Footer = ({ colorBg, colorText }) => {
             <nav className="space-y-2 md:space-y-3">
               {[
                 { name: "Parfums", href: "/category/perfumes" },
+                { name: "Decants", href: "/category/decants" },
                 { name: "Cosmétiques", href: "/category/cosmetics" },
                 { name: "Cadeaux", href: "/category/gifts" },
                 { name: "Collections", href: "/products" },

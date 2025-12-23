@@ -14,7 +14,7 @@ import { Link } from "react-router-dom";
 import { useProductStore } from "../stores/useProductStore";
 import { useCartStore } from "../stores/useCartStore";
 
-const Cosmetics = () => {
+const Decants = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedGenders, setSelectedGenders] = useState([]);
   const [priceRange, setPriceRange] = useState([0, 100000]);
@@ -22,10 +22,10 @@ const Cosmetics = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const productsPerPage = 10;
 
-  const { getProductByCategory, products, loading } = useProductStore();
+  const { products, getProductByCategory, loading } = useProductStore();
 
   useEffect(() => {
-    getProductByCategory("Cosmétiques");
+    getProductByCategory("Decants");
   }, [getProductByCategory]);
 
   // دالة لحساب السعر النهائي
@@ -40,7 +40,7 @@ const Cosmetics = () => {
   const genders = [
     {
       id: "all",
-      name: "Tous les cosmétiques",
+      name: "Tous les decants",
       count: products.length,
     },
     {
@@ -66,15 +66,15 @@ const Cosmetics = () => {
     return `${price.toLocaleString("fr-FR")} DA`;
   };
 
-  // Filtering cosmetics with gender filter and price sorting - UPDATED
-  const filteredCosmetics = useMemo(() => {
-    let filtered = products.filter((cosmetic) => {
-      const finalPrice = calculateFinalPrice(cosmetic);
+  // Filtering decants with gender filter and price sorting
+  const filteredDecants = useMemo(() => {
+    let filtered = products.filter((decant) => {
+      const finalPrice = calculateFinalPrice(decant);
 
       const matchesGender =
         selectedGenders.length === 0 ||
         selectedGenders.includes("all") ||
-        selectedGenders.includes(cosmetic.gender);
+        selectedGenders.includes(decant.gender);
 
       // استخدام السعر النهائي بدلاً من السعر الأصلي
       const matchesPrice = finalPrice <= priceRange[1];
@@ -96,10 +96,10 @@ const Cosmetics = () => {
   }, [products, selectedGenders, priceRange, priceSort]);
 
   // Pagination logic
-  const totalPages = Math.ceil(filteredCosmetics.length / productsPerPage);
+  const totalPages = Math.ceil(filteredDecants.length / productsPerPage);
   const startIndex = (currentPage - 1) * productsPerPage;
   const endIndex = startIndex + productsPerPage;
-  const currentCosmetics = filteredCosmetics.slice(startIndex, endIndex);
+  const currentDecants = filteredDecants.slice(startIndex, endIndex);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -131,8 +131,8 @@ const Cosmetics = () => {
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 200, damping: 15 }}
           >
-            <span className="text-primary">Notre</span>{" "}
-            <span className="text-secondary">Collection de Cosmétiques</span>
+            <span className="text-primary">Nos</span>{" "}
+            <span className="text-secondary">Decants</span>
           </motion.h1>
           <motion.p
             className="text-base sm:text-lg md:text-xl text-primary/80 max-w-2xl mx-auto"
@@ -140,7 +140,7 @@ const Cosmetics = () => {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
           >
-            Découvrez nos cosmétiques de luxe pour une beauté éclatante
+            Découvrez nos échantillons de parfums de luxe
           </motion.p>
         </motion.div>
 
@@ -213,9 +213,9 @@ const Cosmetics = () => {
             className="text-center mb-8"
           >
             <p className="text-primary/60 text-sm sm:text-base md:text-lg">
-              {filteredCosmetics.length} cosmétique
-              {filteredCosmetics.length > 1 ? "s" : ""} trouvé
-              {filteredCosmetics.length > 1 ? "s" : ""}
+              {filteredDecants.length} decant
+              {filteredDecants.length > 1 ? "s" : ""} trouvé
+              {filteredDecants.length > 1 ? "s" : ""}
               {selectedGenders.length > 0 &&
                 !selectedGenders.includes("all") &&
                 ` • ${selectedGenders.join(", ")}`}
@@ -238,14 +238,12 @@ const Cosmetics = () => {
           >
             <div className="text-center">
               <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-secondary mx-auto mb-4"></div>
-              <p className="text-primary text-lg">
-                Chargement des cosmétiques...
-              </p>
+              <p className="text-primary text-lg">Chargement des decants...</p>
             </div>
           </motion.div>
         )}
 
-        {/* Cosmetics Grid - Only show when not loading */}
+        {/* Decants Grid - Only show when not loading */}
         {!loading && (
           <>
             <motion.div
@@ -261,10 +259,10 @@ const Cosmetics = () => {
               className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"
             >
               <AnimatePresence mode="wait">
-                {currentCosmetics.map((cosmetic) => (
-                  <CosmeticCard
-                    key={cosmetic._id}
-                    cosmetic={cosmetic}
+                {currentDecants.map((decant) => (
+                  <DecantCard
+                    key={decant._id}
+                    decant={decant}
                     formatPrice={formatPrice}
                     calculateFinalPrice={calculateFinalPrice}
                   />
@@ -272,8 +270,8 @@ const Cosmetics = () => {
               </AnimatePresence>
             </motion.div>
 
-            {/* Pagination - Only show if more than 10 cosmetics */}
-            {filteredCosmetics.length > productsPerPage && (
+            {/* Pagination - Only show if more than 10 decants */}
+            {filteredDecants.length > productsPerPage && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -350,8 +348,8 @@ const Cosmetics = () => {
           </>
         )}
 
-        {/* Empty State - Only show when not loading and no products */}
-        {!loading && filteredCosmetics.length === 0 && (
+        {/* Empty State - Only show when not loading and no decants */}
+        {!loading && filteredDecants.length === 0 && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -359,7 +357,7 @@ const Cosmetics = () => {
           >
             <div className="text-6xl mb-4">🔍</div>
             <h3 className="text-xl sm:text-2xl font-bold text-primary mb-2">
-              Aucun cosmétique trouvé
+              Aucun decant trouvé
             </h3>
             <p className="text-primary/80 mb-6 text-sm sm:text-base">
               Essayez d'ajuster vos filtres
@@ -395,12 +393,31 @@ const Cosmetics = () => {
   );
 };
 
-// Cosmetic Card (updated with responsive design for 2 items per row)
-const CosmeticCard = ({ cosmetic, formatPrice, calculateFinalPrice }) => {
+// Decant Card Component
+const DecantCard = ({ decant, formatPrice, calculateFinalPrice }) => {
   const { addToCart } = useCartStore();
 
-  const finalPrice = calculateFinalPrice(cosmetic);
-  const hasDiscount = cosmetic.discount > 0;
+  const finalPrice = calculateFinalPrice(decant);
+  const hasDiscount = decant.discount > 0;
+
+  // Function to handle adding decant to cart with default volume
+  const handleAddToCart = () => {
+    // Get default volume from product data
+    const defaultVolume = decant.defaultVolume || "10ml";
+
+    // Create a new object with the decant data plus volume information
+    const decantWithVolume = {
+      ...decant,
+      volume: defaultVolume, // Use default volume from product
+      // If volume pricing exists, use the price for the default volume
+      price: decant.volumePricing?.[defaultVolume] || finalPrice,
+    };
+    addToCart(decantWithVolume);
+  };
+
+  // Get available sizes for display
+  const availableSizes = decant.availableSizes || ["10ml", "20ml", "30ml"];
+  const defaultVolume = decant.defaultVolume || "10ml";
 
   return (
     <motion.div
@@ -411,35 +428,35 @@ const CosmeticCard = ({ cosmetic, formatPrice, calculateFinalPrice }) => {
       whileHover={{ y: -5, scale: 1.02 }}
       className="bg-background rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group flex flex-col h-full"
     >
-      <Link to={`/products/${cosmetic._id}`}>
+      <Link to={`/products/${decant._id}`}>
         <div className="relative overflow-hidden aspect-square">
           <img
-            src={cosmetic.image}
-            alt={cosmetic.title}
+            src={decant.image}
+            alt={decant.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
 
           {/* Top Badges - Responsive positioning */}
           <div className="absolute top-2 right-2 bg-secondary text-primary px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold">
-            {cosmetic.category}
+            {decant.category}
           </div>
           <div className="absolute top-2 left-2 bg-accent text-primary px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold capitalize">
-            {cosmetic.gender}
+            {decant.gender}
           </div>
 
           {/* Discount Badge - Responsive size */}
           {hasDiscount && (
             <div className="absolute top-10 left-2 bg-red-500 text-white px-2 py-1 rounded-full text-[10px] sm:text-xs font-bold">
-              -{cosmetic.discount}%
+              -{decant.discount}%
             </div>
           )}
         </div>
       </Link>
 
       <div className="p-3 sm:p-4 flex flex-col grow">
-        {/* Cosmetic Title - Responsive text size and line clamp */}
+        {/* Decant Title - Responsive text size and line clamp */}
         <h3 className="text-lg sm:text-xl font-bold text-primary mb-2 sm:mb-3 line-clamp-2 min-h-[2.5em]">
-          {cosmetic.title}
+          {decant.title}
         </h3>
 
         {/* Price Display - Clean and Professional with responsive sizing */}
@@ -455,22 +472,34 @@ const CosmeticCard = ({ cosmetic, formatPrice, calculateFinalPrice }) => {
 
             {hasDiscount && (
               <span className="text-xs sm:text-sm lg:text-base text-primary/60 line-through">
-                {formatPrice(cosmetic.price)}
+                {formatPrice(decant.price)}
               </span>
             )}
+          </div>
+          {/* Volume badge - shows default volume for decants */}
+          <div className="mt-2">
+            <span className="inline-block bg-secondary/20 text-secondary text-xs px-2 py-1 rounded-full font-semibold">
+              {defaultVolume} (Par défaut)
+            </span>
+            <p className="text-xs text-primary/60 mt-1">
+              Tailles disponibles: {availableSizes.join(", ")}
+            </p>
+            <p className="text-xs text-primary/60 mt-1">
+              Cliquez pour choisir d'autres volumes et prix
+            </p>
           </div>
         </div>
 
         {/* Add to Cart Button - Responsive text and padding */}
         <motion.button
-          onClick={() => addToCart(cosmetic)}
+          onClick={handleAddToCart}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           className="w-full bg-primary text-background py-2 px-2 sm:px-3 rounded-xl font-semibold hover:bg-primary/90 transition-all duration-300 flex items-center justify-center space-x-1 sm:space-x-2 mt-auto"
         >
           <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4" />
           <span className="truncate text-sm md:text-base lg:text-lg">
-            Ajouter
+            Ajouter ({defaultVolume})
           </span>
         </motion.button>
       </div>
@@ -629,4 +658,4 @@ const FilterSidebar = ({
   );
 };
 
-export default Cosmetics;
+export default Decants;

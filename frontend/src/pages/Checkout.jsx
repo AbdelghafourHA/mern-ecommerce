@@ -33,7 +33,9 @@ const Checkout = () => {
       setItemCount(directCheckoutData.count);
 
       // Clear direct checkout data after reading
-      localStorage.removeItem("directCheckout");
+      setTimeout(() => {
+        localStorage.removeItem("directCheckout");
+      }, 100);
     } else {
       // Normal checkout from cart
       const cart = JSON.parse(localStorage.getItem("cart") || "[]");
@@ -145,8 +147,10 @@ const Checkout = () => {
       name: item.title,
       quantity: item.quantity,
       image: item.image,
-      price: item.unitPrice || item.price, // Use unitPrice for direct checkout
+      price: item.unitPrice || item.price,
       product: item._id,
+      // ADD VOLUME TO ORDER ITEMS
+      volume: item.volume || (item.category === "Decants" ? "10ml" : null),
     }));
 
     // تجهيز بيانات الطلب النهائية
@@ -383,9 +387,17 @@ const Checkout = () => {
                           {item.title}
                         </h4>
                         <div className="flex justify-between items-center mt-1">
-                          <span className="text-secondary font-bold01 text-sm sm:text-base">
-                            {formatPrice(item.unitPrice || item.price)}
-                          </span>
+                          <div>
+                            <span className="text-secondary font-bold01 text-sm sm:text-base">
+                              {formatPrice(item.unitPrice || item.price)}
+                            </span>
+                            {/* Display volume in checkout */}
+                            {item.volume && (
+                              <span className="ml-2 bg-secondary/20 text-secondary px-2 py-0.5 rounded text-xs font-semibold">
+                                {item.volume}
+                              </span>
+                            )}
+                          </div>
                           <span className="text-primary/60 text-xs sm:text-sm font-bold01">
                             x{item.quantity}
                           </span>

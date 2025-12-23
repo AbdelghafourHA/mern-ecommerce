@@ -137,7 +137,7 @@ const Home = () => {
                         {category.subcategories.map((subcat) => (
                           <span
                             key={subcat}
-                            className="bg-secondary text-primary px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold"
+                            className="bg-accent text-primary px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold"
                           >
                             {subcat}
                           </span>
@@ -272,7 +272,7 @@ const Home = () => {
 
                   <div className="p-3 sm:p-4 flex flex-col grow">
                     {/* Product Title - Responsive text size and line clamp */}
-                    <h3 className="text-sm sm:text-base font-semibold text-primary mb-2 sm:mb-3 line-clamp-2 min-h-[2.5em]">
+                    <h3 className="text-lg sm:text-xl font-bold text-primary mb-2 sm:mb-3 line-clamp-2 min-h-[2.5em]">
                       {product.title}
                     </h3>
 

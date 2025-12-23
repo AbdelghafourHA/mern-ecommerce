@@ -53,6 +53,11 @@ const checkoutSchema = new mongoose.Schema(
           required: true,
           ref: "Product",
         },
+        // ADD VOLUME FIELD FOR DECANTS
+        volume: {
+          type: String,
+          default: null,
+        },
       },
     ],
     shippingPrice: {

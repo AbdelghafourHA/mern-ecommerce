@@ -170,7 +170,7 @@ const HeroSection = () => {
                     className="text-center"
                   >
                     {/* Title with text shadow */}
-                    <h1 className="font-bold01 text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-white mb-4 sm:mb-6 [text-shadow:_0_2px_8px_rgba(0,0,0,0.5)] drop-shadow-2xl">
+                    <h1 className="font-bold01 text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-white mb-4 sm:mb-6 [text-shadow:_0_2px_8px_rgba(0,0,0,0.5)] drop-shadow-2xl font-bold ">
                       {slideContents[index].title}
                     </h1>
 
