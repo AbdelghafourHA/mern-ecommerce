@@ -64,7 +64,7 @@ const Cart = () => {
               </div>
 
               {/* Total */}
-              <div className="flex items-center justify-between text-background/80 text-xs sm:text-sm font-bold01">
+              <div className="flex items-center justify-between text-background/80 text-xs sm:text-sm font-p01">
                 <span>Total: {formatPrice(total)}</span>
                 <span>
                   {cart.length} article{cart.length > 1 ? "s" : ""}
@@ -119,7 +119,7 @@ const Cart = () => {
 
                             {/* Product Details */}
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-primary font-bold01 text-xs sm:text-sm line-clamp-2 mb-1">
+                              <h3 className="text-primary font-bold01 font-bold text-sm sm:text-sm lg:text-base line-clamp-2 mb-1">
                                 {item.title}
                               </h3>
                               <p className="text-primary/60 text-xs font-bold01 capitalize mb-2">
@@ -134,7 +134,7 @@ const Cart = () => {
 
                               {/* Price & Quantity */}
                               <div className="flex items-center justify-between">
-                                <span className="text-base sm:text-lg font-bold text-secondary font-bold01">
+                                <span className="text-base sm:text-lg font-bold text-secondary font-p01">
                                   {formatPrice(item.price)}
                                 </span>
 
@@ -151,7 +151,7 @@ const Cart = () => {
                                     />
                                   </motion.button>
 
-                                  <span className="w-6 sm:w-8 text-center font-bold text-primary font-bold01 text-xs sm:text-sm">
+                                  <span className="w-6 sm:w-8 text-center font-bold text-primary font-p01 text-xs sm:text-sm">
                                     {item.quantity}
                                   </span>
 
@@ -199,7 +199,7 @@ const Cart = () => {
                         onClick={() => setIsCartOpen(false)}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        className="w-full bg-secondary text-primary py-3 sm:py-4 rounded-xl font-bold01 text-sm sm:text-base hover:shadow-lg transition-all duration-300"
+                        className="w-full bg-secondary text-primary py-3 sm:py-4 rounded-xl font-p01 font-bold text-sm sm:text-base hover:shadow-lg transition-all duration-300"
                       >
                         Passer la commande
                       </motion.button>
@@ -209,7 +209,7 @@ const Cart = () => {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => setIsCartOpen(false)}
-                      className="w-full border border-primary/20 text-primary py-2 sm:py-3 rounded-xl font-bold01 hover:border-secondary hover:text-secondary transition-all duration-300 text-sm sm:text-base"
+                      className="w-full border border-primary/20 text-primary py-2 sm:py-3 rounded-xl p01 font-bold hover:border-secondary hover:text-secondary transition-all duration-300 text-sm sm:text-base"
                     >
                       Continuer mes achats
                     </motion.button>

@@ -127,7 +127,7 @@ const Admin = () => {
                   whileHover={{ x: 5 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold01 ${
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 font-p01 ${
                     activeTab === item.id
                       ? "bg-secondary text-primary shadow-lg"
                       : "text-white/80 hover:text-white hover:bg-white/10"
@@ -148,10 +148,10 @@ const Admin = () => {
             <div className="flex w-full justify-between items-center gap-4">
               {user && (
                 <div className="text-left">
-                  <p className="text-primary font-bold01 text-md">
+                  <p className="text-primary font-p01 font-bold text-md">
                     {user.username}
                   </p>
-                  <p className="text-primary/60 text-sm capitalize">
+                  <p className="text-primary/60 text-sm font-bold capitalize">
                     {user.role === "super-admin"
                       ? "Super Administrateur"
                       : "Administrateur"}
@@ -212,6 +212,9 @@ const ProductsManager = ({ formatPrice }) => {
   const [applyingBulkDiscount, setApplyingBulkDiscount] = useState(false);
   const [isBulkDiscountOpen, setIsBulkDiscountOpen] = useState(false);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
   const {
     products,
     deleteProduct,
@@ -228,6 +231,11 @@ const ProductsManager = ({ formatPrice }) => {
       product.category?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentProducts = filteredProducts.slice(startIndex, endIndex);
+
   const uniqueCategories = [
     ...new Set(products.map((product) => product.category).filter(Boolean)),
   ];
@@ -240,11 +248,8 @@ const ProductsManager = ({ formatPrice }) => {
     }
   };
 
-  // Helper function to get display price for product
   const getDisplayPrice = (product) => {
-    // For decants, show the price for default volume (10ml)
     if (product.category === "Decants" && product.volumePricing) {
-      // Handle both Map and object formats
       let volumePricing;
       if (
         product.volumePricing instanceof Map ||
@@ -259,7 +264,6 @@ const ProductsManager = ({ formatPrice }) => {
         volumePricing = product.volumePricing || {};
       }
 
-      // Get price for default volume (10ml) or first available size
       const defaultVolume = product.defaultVolume || "10ml";
       const volumePrice = volumePricing[defaultVolume];
 
@@ -268,11 +272,9 @@ const ProductsManager = ({ formatPrice }) => {
       }
     }
 
-    // For non-decants or decants without volume pricing, use the base price
     return product.price;
   };
 
-  // Helper function to get final price with discount
   const getFinalPrice = (product) => {
     const displayPrice = getDisplayPrice(product);
 
@@ -328,6 +330,17 @@ const ProductsManager = ({ formatPrice }) => {
     }
   };
 
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  const handleItemsPerPageChange = (e) => {
+    setItemsPerPage(Number(e.target.value));
+    setCurrentPage(1);
+  };
+
   if (editingProduct) {
     return (
       <EditProductForm
@@ -347,33 +360,47 @@ const ProductsManager = ({ formatPrice }) => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
     >
-      {/* Header Section */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
         <div>
           <h2 className="text-xl lg:text-2xl xl:text-3xl font-bold text-primary font-bold01">
             Gestion des Produits
           </h2>
-          <p className="text-primary/60 text-sm lg:text-base mt-1">
-            {products.length} produit(s) au total
-          </p>
         </div>
 
-        <div className="relative w-full lg:w-64">
-          <Search
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-primary/40"
-            size={20}
-          />
-          <input
-            type="text"
-            placeholder="Rechercher produits..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 lg:py-3 border border-primary/20 rounded-xl focus:outline-none focus:border-secondary text-sm lg:text-base"
-          />
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex items-center space-x-2">
+            <span className="text-primary/60 text-sm">Afficher:</span>
+            <select
+              value={itemsPerPage}
+              onChange={handleItemsPerPageChange}
+              className="border border-primary/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-secondary"
+            >
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+            </select>
+          </div>
+
+          <div className="relative w-full lg:w-64">
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-primary/40"
+              size={20}
+            />
+            <input
+              type="text"
+              placeholder="Rechercher produits..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full pl-10 pr-4 py-2 lg:py-3 border border-primary/20 rounded-xl focus:outline-none focus:border-secondary text-sm lg:text-base"
+            />
+          </div>
         </div>
       </div>
 
-      {/* Bulk Discount Section - Mobile Collapsible */}
       <div className="mb-6">
         <button
           onClick={() => setIsBulkDiscountOpen(!isBulkDiscountOpen)}
@@ -548,9 +575,7 @@ const ProductsManager = ({ formatPrice }) => {
         )}
       </div>
 
-      {/* Products Grid/Table */}
       <div className="overflow-hidden">
-        {/* Desktop Table */}
         <div className="hidden lg:block overflow-x-auto">
           <table className="w-full min-w-[800px] xl:min-w-[1000px]">
             <thead>
@@ -576,7 +601,7 @@ const ProductsManager = ({ formatPrice }) => {
               </tr>
             </thead>
             <tbody>
-              {filteredProducts.map((product) => {
+              {currentProducts.map((product) => {
                 const displayPrice = getDisplayPrice(product);
                 const finalPrice = getFinalPrice(product);
                 const savings = displayPrice - finalPrice;
@@ -602,7 +627,6 @@ const ProductsManager = ({ formatPrice }) => {
                           <p className="text-xs text-primary/60 capitalize">
                             {product.gender}
                           </p>
-                          {/* Show volume info for decants */}
                           {product.category === "Decants" && (
                             <div className="flex items-center space-x-1 mt-1">
                               {product.availableSizes?.map((size) => (
@@ -723,16 +747,15 @@ const ProductsManager = ({ formatPrice }) => {
           </table>
         </div>
 
-        {/* Mobile Cards */}
         <div className="lg:hidden space-y-4">
-          {filteredProducts.length === 0 ? (
+          {currentProducts.length === 0 ? (
             <div className="text-center py-8 text-primary/60 text-sm">
               {searchTerm
                 ? "Aucun produit trouvé"
                 : "Aucun produit pour le moment"}
             </div>
           ) : (
-            filteredProducts.map((product) => {
+            currentProducts.map((product) => {
               const displayPrice = getDisplayPrice(product);
               const finalPrice = getFinalPrice(product);
               const savings = displayPrice - finalPrice;
@@ -762,7 +785,6 @@ const ProductsManager = ({ formatPrice }) => {
                           {product.gender}
                         </span>
                       </div>
-                      {/* Show volume info for decants */}
                       {product.category === "Decants" && (
                         <div className="flex items-center space-x-1 mb-2">
                           {product.availableSizes?.map((size) => (
@@ -880,6 +902,58 @@ const ProductsManager = ({ formatPrice }) => {
           )}
         </div>
       </div>
+
+      {filteredProducts.length > 0 && (
+        <div className="flex justify-center mt-6 pt-6 border-t border-primary/10">
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="p-2 rounded-lg border border-primary/20 text-primary hover:bg-primary/5 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              ←
+            </button>
+
+            {[...Array(totalPages)].map((_, i) => {
+              const page = i + 1;
+              if (
+                page === 1 ||
+                page === totalPages ||
+                (page >= currentPage - 1 && page <= currentPage + 1)
+              ) {
+                return (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page)}
+                    className={`w-10 h-10 rounded-lg text-sm font-medium ${
+                      currentPage === page
+                        ? "bg-primary text-white"
+                        : "text-primary hover:bg-primary/10 border border-primary/20"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                );
+              } else if (page === currentPage - 2 || page === currentPage + 2) {
+                return (
+                  <span key={page} className="text-primary/40">
+                    ...
+                  </span>
+                );
+              }
+              return null;
+            })}
+
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="p-2 rounded-lg border border-primary/20 text-primary hover:bg-primary/5 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              →
+            </button>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 };
@@ -892,7 +966,6 @@ const AddProduct = () => {
     category: "Parfums",
     gender: "femme",
     image: "",
-    // ADD VOLUME PRICING FIELDS
     volumePricing: {
       "10ml": "",
       "20ml": "",
@@ -920,11 +993,16 @@ const AddProduct = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // For decants, set base price to 10ml price
+      let basePrice = formData.price;
+      if (formData.category === "Decants") {
+        basePrice = formData.volumePricing["10ml"] || formData.price;
+      }
+
       // Prepare data for API
       const productData = {
         ...formData,
-        price: parseFloat(formData.price),
-        // Process volume pricing for decants
+        price: parseFloat(basePrice),
         volumePricing:
           formData.category === "Decants"
             ? Object.fromEntries(
@@ -965,12 +1043,16 @@ const AddProduct = () => {
   };
 
   const handleVolumePricingChange = (size, value) => {
+    const newVolumePricing = {
+      ...formData.volumePricing,
+      [size]: value,
+    };
+
     setFormData({
       ...formData,
-      volumePricing: {
-        ...formData.volumePricing,
-        [size]: value,
-      },
+      volumePricing: newVolumePricing,
+      // Auto-fill 10ml as base price
+      price: size === "10ml" ? value : formData.price,
     });
   };
 
@@ -982,7 +1064,6 @@ const AddProduct = () => {
     setFormData({
       ...formData,
       availableSizes: newSizes,
-      // Update default volume if it's removed
       defaultVolume:
         !newSizes.includes(formData.defaultVolume) && newSizes.length > 0
           ? newSizes[0]
@@ -990,15 +1071,17 @@ const AddProduct = () => {
     });
   };
 
-  // Calculate base price for decants (lowest volume price)
+  // Calculate base price - always use 10ml price for decants
   const calculateBasePrice = () => {
     if (formData.category !== "Decants") return formData.price;
 
-    const prices = Object.values(formData.volumePricing)
-      .filter((val) => val !== "")
-      .map((val) => parseFloat(val));
+    // For decants, base price is always the 10ml price
+    const tenMlPrice = formData.volumePricing["10ml"];
+    if (tenMlPrice && tenMlPrice !== "") {
+      return tenMlPrice;
+    }
 
-    return prices.length > 0 ? Math.min(...prices) : formData.price;
+    return formData.price || 0;
   };
 
   return (
@@ -1057,20 +1140,17 @@ const AddProduct = () => {
                   required
                   min="0"
                   step="0.01"
-                  value={
-                    formData.category === "Decants"
-                      ? calculateBasePrice()
-                      : formData.price
-                  }
+                  value={calculateBasePrice()}
                   onChange={(e) =>
                     setFormData({ ...formData, price: e.target.value })
                   }
                   className="w-full p-3 border border-primary/20 rounded-xl focus:outline-none focus:border-secondary text-sm lg:text-base"
                   placeholder="0"
+                  readOnly={formData.category === "Decants"}
                 />
                 {formData.category === "Decants" && (
                   <p className="text-primary/60 text-xs mt-1">
-                    Ce prix sera utilisé comme référence pour le 10ml
+                    Ce prix sera automatiquement rempli avec le prix du 10ml
                   </p>
                 )}
               </div>
@@ -1086,7 +1166,6 @@ const AddProduct = () => {
                     setFormData({
                       ...formData,
                       category: newCategory,
-                      // Reset volume pricing if not decants
                       volumePricing:
                         newCategory === "Decants"
                           ? formData.volumePricing
@@ -1165,7 +1244,7 @@ const AddProduct = () => {
                         Tailles disponibles
                       </label>
                       <div className="flex flex-wrap gap-2">
-                        {["10ml", "20ml", "30ml", "5ml", "2ml"].map((size) => (
+                        {["10ml", "20ml", "30ml"].map((size) => (
                           <button
                             key={size}
                             type="button"
@@ -1217,7 +1296,7 @@ const AddProduct = () => {
                             key={size}
                             className="flex items-center justify-between"
                           >
-                            <span className="text-primary font-bold01 text-sm w-16">
+                            <span className="text-primary font-bold01 text-base w-16">
                               {size}
                             </span>
                             <input
@@ -1241,8 +1320,8 @@ const AddProduct = () => {
                         ))}
                       </div>
                       <p className="text-primary/60 text-xs mt-2">
-                        * Définissez des prix différents pour chaque taille. Les
-                        prix peuvent être proportionnels ou indépendants.
+                        * Définissez des prix différents pour chaque taille. Le
+                        prix du 10ml sera utilisé comme prix de base.
                       </p>
                     </div>
                   </motion.div>
@@ -1354,6 +1433,491 @@ const AddProduct = () => {
             ) : (
               "Ajouter le Produit"
             )}
+          </motion.button>
+        </div>
+      </form>
+    </motion.div>
+  );
+};
+
+const EditProductForm = ({ product, onSave, onCancel }) => {
+  const [formData, setFormData] = useState({
+    title: product.title || "",
+    description: product.description || "",
+    price: product.price || "",
+    category: product.category || "Parfums",
+    gender: product.gender || "femme",
+    image: product.image || "",
+    volumePricing: product.volumePricing
+      ? (() => {
+          // If it's a Map, convert to object
+          if (
+            product.volumePricing instanceof Map ||
+            product.volumePricing[Symbol.iterator]
+          ) {
+            try {
+              return Object.fromEntries(product.volumePricing);
+            } catch {
+              return { "10ml": "", "20ml": "", "30ml": "" };
+            }
+          }
+          // If it's already an object, use it
+          if (
+            typeof product.volumePricing === "object" &&
+            product.volumePricing !== null
+          ) {
+            return {
+              "10ml": product.volumePricing["10ml"] || "",
+              "20ml": product.volumePricing["20ml"] || "",
+              "30ml": product.volumePricing["30ml"] || "",
+              ...product.volumePricing,
+            };
+          }
+          return { "10ml": "", "20ml": "", "30ml": "" };
+        })()
+      : { "10ml": "", "20ml": "", "30ml": "" },
+    availableSizes: product.availableSizes || ["10ml", "20ml", "30ml"],
+    defaultVolume: product.defaultVolume || "10ml",
+  });
+
+  const [showVolumePricing, setShowVolumePricing] = useState(
+    product.category === "Decants"
+  );
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    // Prepare data for API
+    const productData = {
+      title: formData.title,
+      description: formData.description,
+      price: parseFloat(formData.price),
+      category: formData.category,
+      gender: formData.gender,
+      image: formData.image,
+    };
+
+    // Handle volume pricing based on category
+    if (formData.category === "Decants") {
+      // For Decants, include volume pricing
+      productData.volumePricing = Object.fromEntries(
+        Object.entries(formData.volumePricing)
+          .filter(([_, value]) => value !== "" && !isNaN(parseFloat(value)))
+          .map(([size, value]) => [size, parseFloat(value)])
+      );
+      productData.availableSizes = formData.availableSizes;
+      productData.defaultVolume = formData.defaultVolume;
+    } else {
+      // For non-Decants, explicitly set volume pricing to empty/undefined
+      productData.volumePricing = {};
+      productData.availableSizes = [];
+      productData.defaultVolume = null;
+    }
+
+    onSave(productData);
+  };
+
+  const handleImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, image: reader.result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleVolumePricingChange = (size, value) => {
+    const newVolumePricing = {
+      ...formData.volumePricing,
+      [size]: value,
+    };
+
+    setFormData({
+      ...formData,
+      volumePricing: newVolumePricing,
+      // Auto-update base price when 10ml price changes
+      price: size === "10ml" ? value : formData.price,
+    });
+  };
+
+  const handleAvailableSizeToggle = (size) => {
+    const newSizes = formData.availableSizes.includes(size)
+      ? formData.availableSizes.filter((s) => s !== size)
+      : [...formData.availableSizes, size];
+
+    setFormData({
+      ...formData,
+      availableSizes: newSizes,
+      defaultVolume:
+        !newSizes.includes(formData.defaultVolume) && newSizes.length > 0
+          ? newSizes[0]
+          : formData.defaultVolume,
+    });
+  };
+
+  // Calculate base price for decants - always use 10ml price
+  const calculateBasePrice = () => {
+    if (formData.category !== "Decants") return formData.price;
+
+    const tenMlPrice = formData.volumePricing["10ml"];
+    if (tenMlPrice && tenMlPrice !== "") {
+      return tenMlPrice;
+    }
+
+    return formData.price || 0;
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="bg-white rounded-xl border border-primary/10 p-4 lg:p-6"
+    >
+      <h3 className="text-xl font-bold text-primary font-p01 mb-6">
+        Modifier le Produit
+      </h3>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-primary font-bold01 mb-2 text-sm lg:text-base">
+                Nom du Produit
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.title}
+                onChange={(e) =>
+                  setFormData({ ...formData, title: e.target.value })
+                }
+                className="w-full p-3 border border-primary/20 rounded-xl focus:outline-none focus:border-secondary text-sm lg:text-base"
+              />
+            </div>
+
+            <div>
+              <label className="block text-primary font-bold01 mb-2 text-sm lg:text-base">
+                Description
+              </label>
+              <textarea
+                required
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
+                className="w-full p-3 border border-primary/20 rounded-xl focus:outline-none focus:border-secondary h-32 resize-none text-sm lg:text-base"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-primary font-bold01 mb-2 text-sm lg:text-base">
+                  {formData.category === "Decants"
+                    ? "Prix de base (10ml)"
+                    : "Prix (DA)"}
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  step="0.01"
+                  value={calculateBasePrice()}
+                  onChange={(e) =>
+                    setFormData({ ...formData, price: e.target.value })
+                  }
+                  className="w-full p-3 border border-primary/20 rounded-xl focus:outline-none focus:border-secondary text-sm lg:text-base"
+                  readOnly={formData.category === "Decants"}
+                />
+                {formData.category === "Decants" && (
+                  <p className="text-primary/60 text-xs mt-1">
+                    Prix de référence pour le 10ml (rempli automatiquement)
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-primary font-bold01 mb-2 text-sm lg:text-base">
+                  Catégorie
+                </label>
+                <select
+                  value={formData.category}
+                  onChange={(e) => {
+                    const newCategory = e.target.value;
+                    const isChangingFromDecants =
+                      formData.category === "Decants";
+
+                    setFormData({
+                      ...formData,
+                      category: newCategory,
+                      volumePricing:
+                        newCategory === "Decants"
+                          ? formData.volumePricing
+                          : { "10ml": "", "20ml": "", "30ml": "" },
+                      availableSizes:
+                        newCategory === "Decants"
+                          ? formData.availableSizes
+                          : [],
+                      defaultVolume:
+                        newCategory === "Decants"
+                          ? formData.defaultVolume
+                          : null,
+                    });
+                    setShowVolumePricing(newCategory === "Decants");
+                  }}
+                  className="w-full p-3 border border-primary/20 rounded-xl focus:outline-none focus:border-secondary text-sm lg:text-base"
+                >
+                  <option value="Parfums">Parfums</option>
+                  <option value="Decants">Decants</option>
+                  <option value="Cosmétiques">Cosmétiques</option>
+                  <option value="Cadeaux">Cadeaux</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-primary font-bold01 mb-2 text-sm lg:text-base">
+                Genre
+              </label>
+              <select
+                value={formData.gender}
+                onChange={(e) =>
+                  setFormData({ ...formData, gender: e.target.value })
+                }
+                className="w-full p-3 border border-primary/20 rounded-xl focus:outline-none focus:border-secondary text-sm lg:text-base"
+              >
+                <option value="femme">Femme</option>
+                <option value="homme">Homme</option>
+              </select>
+            </div>
+
+            {/* Volume Pricing Section for Decants */}
+            {formData.category === "Decants" && (
+              <div className="pt-4 border-t border-primary/10">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold01 text-primary">
+                    Configuration des Decants
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowVolumePricing(!showVolumePricing)}
+                    className="flex items-center space-x-2 text-secondary hover:text-primary transition-colors text-sm"
+                  >
+                    <ChevronDown
+                      size={16}
+                      className={`transform transition-transform ${
+                        showVolumePricing ? "rotate-180" : ""
+                      }`}
+                    />
+                    <span>{showVolumePricing ? "Masquer" : "Afficher"}</span>
+                  </button>
+                </div>
+
+                {showVolumePricing && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="space-y-4 bg-primary/5 p-4 rounded-xl"
+                  >
+                    <div>
+                      <label className="block text-primary font-bold01 mb-2 text-sm">
+                        Tailles disponibles
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {["10ml", "20ml", "30ml"].map((size) => (
+                          <button
+                            key={size}
+                            type="button"
+                            onClick={() => handleAvailableSizeToggle(size)}
+                            className={`px-3 py-2 rounded-lg border transition-all duration-300 text-sm ${
+                              formData.availableSizes.includes(size)
+                                ? "bg-primary text-background border-primary"
+                                : "bg-background text-primary border-primary/20 hover:border-primary"
+                            }`}
+                          >
+                            {size}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-primary/60 text-xs mt-2">
+                        Sélectionnez les tailles disponibles pour ce decant
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-primary font-bold01 mb-2 text-sm">
+                        Taille par défaut
+                      </label>
+                      <select
+                        value={formData.defaultVolume}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            defaultVolume: e.target.value,
+                          })
+                        }
+                        className="w-full p-2 border border-primary/20 rounded-lg focus:outline-none focus:border-secondary text-sm"
+                      >
+                        {formData.availableSizes.map((size) => (
+                          <option key={size} value={size}>
+                            {size}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-primary font-bold01 mb-3 text-sm">
+                        Prix par taille (DA)
+                      </label>
+                      <div className="space-y-3">
+                        {["10ml", "20ml", "30ml"].map((size) => (
+                          <div
+                            key={size}
+                            className="flex items-center justify-between"
+                          >
+                            <span className="text-primary font-bold01 text-base w-16">
+                              {size}
+                            </span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={formData.volumePricing[size] || ""}
+                              onChange={(e) =>
+                                handleVolumePricingChange(size, e.target.value)
+                              }
+                              disabled={!formData.availableSizes.includes(size)}
+                              className={`w-32 p-2 border rounded-lg focus:outline-none text-sm ${
+                                !formData.availableSizes.includes(size)
+                                  ? "bg-primary/10 border-primary/10 text-primary/40 cursor-not-allowed"
+                                  : "border-primary/20 focus:border-secondary"
+                              }`}
+                              placeholder="Prix"
+                              required={formData.availableSizes.includes(size)}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-primary/60 text-xs mt-2">
+                        * Définissez des prix différents pour chaque taille
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-primary font-bold01 mb-2 text-sm lg:text-base">
+                Image du Produit
+              </label>
+              <div className="border-2 border-dashed border-primary/20 rounded-xl p-4 lg:p-6 text-center hover:border-secondary transition-colors">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                  id="edit-image-upload"
+                />
+                <label
+                  htmlFor="edit-image-upload"
+                  className="cursor-pointer block"
+                >
+                  <Edit3 className="mx-auto text-primary/40 mb-2" size={32} />
+                  <p className="text-primary font-bold01 text-sm lg:text-base">
+                    Changer l'image
+                  </p>
+                  <p className="text-primary/60 text-xs mt-1">
+                    PNG, JPG, JPEG (Max. 5MB)
+                  </p>
+                </label>
+              </div>
+            </div>
+
+            {formData.image && (
+              <div className="text-center">
+                <label className="block text-primary font-bold01 mb-2 text-sm lg:text-base">
+                  Aperçu
+                </label>
+                <img
+                  src={formData.image}
+                  alt="Aperçu"
+                  className="w-32 h-32 lg:w-40 lg:h-40 rounded-lg object-cover border border-primary/20 mx-auto"
+                />
+              </div>
+            )}
+
+            {/* Price Summary for Decants */}
+            {formData.category === "Decants" && showVolumePricing && (
+              <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
+                <h4 className="font-bold01 text-primary text-base mb-3">
+                  Récapitulatif des prix
+                </h4>
+                <div className="space-y-2">
+                  {Object.entries(formData.volumePricing)
+                    .filter(
+                      ([size, price]) =>
+                        price !== "" &&
+                        !isNaN(parseFloat(price)) &&
+                        formData.availableSizes.includes(size)
+                    )
+                    .map(([size, price]) => (
+                      <div
+                        key={size}
+                        className="flex justify-between items-center text-sm"
+                      >
+                        <span className="text-primary/80">{size}:</span>
+                        <span className="font-p01 text-secondary">
+                          {parseFloat(price).toLocaleString("fr-FR")} DA
+                          {size === formData.defaultVolume && (
+                            <span className="ml-2 text-xs bg-secondary text-primary px-2 py-0.5 rounded">
+                              Défaut
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+                {formData.availableSizes.length === 0 && (
+                  <p className="text-red-600 text-xs mt-2">
+                    ⚠️ Vous devez sélectionner au moins une taille
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 pt-4">
+          <motion.button
+            type="submit"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            disabled={
+              formData.category === "Decants" &&
+              formData.availableSizes.length === 0
+            }
+            className={`flex-1 py-3 rounded-xl font-bold01 hover:shadow-lg transition-all duration-300 text-sm lg:text-base ${
+              formData.category === "Decants" &&
+              formData.availableSizes.length === 0
+                ? "bg-red-600 text-white cursor-not-allowed"
+                : "bg-secondary text-primary"
+            }`}
+          >
+            Sauvegarder
+          </motion.button>
+          <motion.button
+            type="button"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onCancel}
+            className="flex-1 border border-primary/20 text-primary py-3 rounded-xl font-bold01 hover:border-secondary hover:text-secondary transition-all duration-300 text-sm lg:text-base"
+          >
+            Annuler
           </motion.button>
         </div>
       </form>
@@ -2046,492 +2610,6 @@ const Analytics = ({ formatPrice }) => {
           </div>
         </div>
       </div>
-    </motion.div>
-  );
-};
-
-const EditProductForm = ({ product, onSave, onCancel }) => {
-  const [formData, setFormData] = useState({
-    title: product.title || "",
-    description: product.description || "",
-    price: product.price || "",
-    category: product.category || "Parfums",
-    gender: product.gender || "femme",
-    image: product.image || "",
-    // FIX: Handle both Map and object formats for volumePricing
-    volumePricing: product.volumePricing
-      ? (() => {
-          // If it's a Map, convert to object
-          if (
-            product.volumePricing instanceof Map ||
-            product.volumePricing[Symbol.iterator]
-          ) {
-            try {
-              return Object.fromEntries(product.volumePricing);
-            } catch {
-              return { "10ml": "", "20ml": "", "30ml": "" };
-            }
-          }
-          // If it's already an object, use it
-          if (
-            typeof product.volumePricing === "object" &&
-            product.volumePricing !== null
-          ) {
-            return {
-              "10ml": product.volumePricing["10ml"] || "",
-              "20ml": product.volumePricing["20ml"] || "",
-              "30ml": product.volumePricing["30ml"] || "",
-              ...product.volumePricing,
-            };
-          }
-          return { "10ml": "", "20ml": "", "30ml": "" };
-        })()
-      : { "10ml": "", "20ml": "", "30ml": "" },
-    availableSizes: product.availableSizes || ["10ml", "20ml", "30ml"],
-    defaultVolume: product.defaultVolume || "10ml",
-  });
-
-  const [showVolumePricing, setShowVolumePricing] = useState(
-    product.category === "Decants"
-  );
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    // Prepare data for API
-    const productData = {
-      title: formData.title,
-      description: formData.description,
-      price: parseFloat(formData.price),
-      category: formData.category,
-      gender: formData.gender,
-      image: formData.image,
-    };
-
-    // Handle volume pricing based on category
-    if (formData.category === "Decants") {
-      // For Decants, include volume pricing
-      productData.volumePricing = Object.fromEntries(
-        Object.entries(formData.volumePricing)
-          .filter(([_, value]) => value !== "" && !isNaN(parseFloat(value)))
-          .map(([size, value]) => [size, parseFloat(value)])
-      );
-      productData.availableSizes = formData.availableSizes;
-      productData.defaultVolume = formData.defaultVolume;
-    } else {
-      // For non-Decants, explicitly set volume pricing to empty/undefined
-      productData.volumePricing = {};
-      productData.availableSizes = [];
-      productData.defaultVolume = null;
-    }
-
-    onSave(productData);
-  };
-
-  const handleImageUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, image: reader.result });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleVolumePricingChange = (size, value) => {
-    setFormData({
-      ...formData,
-      volumePricing: {
-        ...formData.volumePricing,
-        [size]: value,
-      },
-    });
-  };
-
-  const handleAvailableSizeToggle = (size) => {
-    const newSizes = formData.availableSizes.includes(size)
-      ? formData.availableSizes.filter((s) => s !== size)
-      : [...formData.availableSizes, size];
-
-    setFormData({
-      ...formData,
-      availableSizes: newSizes,
-      // Update default volume if it's removed
-      defaultVolume:
-        !newSizes.includes(formData.defaultVolume) && newSizes.length > 0
-          ? newSizes[0]
-          : formData.defaultVolume,
-    });
-  };
-
-  // Calculate base price for decants
-  const calculateBasePrice = () => {
-    if (formData.category !== "Decants") return formData.price;
-
-    const prices = Object.values(formData.volumePricing)
-      .filter((val) => val !== "" && !isNaN(parseFloat(val)))
-      .map((val) => parseFloat(val));
-
-    return prices.length > 0 ? Math.min(...prices) : formData.price;
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="bg-white rounded-xl border border-primary/10 p-4 lg:p-6"
-    >
-      <h3 className="text-xl font-bold text-primary font-p01 mb-6">
-        Modifier le Produit
-      </h3>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-primary font-bold01 mb-2 text-sm lg:text-base">
-                Nom du Produit
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.title}
-                onChange={(e) =>
-                  setFormData({ ...formData, title: e.target.value })
-                }
-                className="w-full p-3 border border-primary/20 rounded-xl focus:outline-none focus:border-secondary text-sm lg:text-base"
-              />
-            </div>
-
-            <div>
-              <label className="block text-primary font-bold01 mb-2 text-sm lg:text-base">
-                Description
-              </label>
-              <textarea
-                required
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                className="w-full p-3 border border-primary/20 rounded-xl focus:outline-none focus:border-secondary h-32 resize-none text-sm lg:text-base"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-primary font-bold01 mb-2 text-sm lg:text-base">
-                  {formData.category === "Decants"
-                    ? "Prix de base (10ml)"
-                    : "Prix (DA)"}
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  step="0.01"
-                  value={
-                    formData.category === "Decants"
-                      ? calculateBasePrice()
-                      : formData.price
-                  }
-                  onChange={(e) =>
-                    setFormData({ ...formData, price: e.target.value })
-                  }
-                  className="w-full p-3 border border-primary/20 rounded-xl focus:outline-none focus:border-secondary text-sm lg:text-base"
-                />
-                {formData.category === "Decants" && (
-                  <p className="text-primary/60 text-xs mt-1">
-                    Prix de référence pour le 10ml
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-primary font-bold01 mb-2 text-sm lg:text-base">
-                  Catégorie
-                </label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => {
-                    const newCategory = e.target.value;
-                    const isChangingFromDecants =
-                      formData.category === "Decants";
-
-                    setFormData({
-                      ...formData,
-                      category: newCategory,
-                      // Reset volume pricing when changing from Decants to another category
-                      volumePricing:
-                        newCategory === "Decants"
-                          ? formData.volumePricing
-                          : { "10ml": "", "20ml": "", "30ml": "" },
-                      availableSizes:
-                        newCategory === "Decants"
-                          ? formData.availableSizes
-                          : [],
-                      defaultVolume:
-                        newCategory === "Decants"
-                          ? formData.defaultVolume
-                          : null,
-                    });
-                    setShowVolumePricing(newCategory === "Decants");
-                  }}
-                  className="w-full p-3 border border-primary/20 rounded-xl focus:outline-none focus:border-secondary text-sm lg:text-base"
-                >
-                  <option value="Parfums">Parfums</option>
-                  <option value="Decants">Decants</option>
-                  <option value="Cosmétiques">Cosmétiques</option>
-                  <option value="Cadeaux">Cadeaux</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-primary font-bold01 mb-2 text-sm lg:text-base">
-                Genre
-              </label>
-              <select
-                value={formData.gender}
-                onChange={(e) =>
-                  setFormData({ ...formData, gender: e.target.value })
-                }
-                className="w-full p-3 border border-primary/20 rounded-xl focus:outline-none focus:border-secondary text-sm lg:text-base"
-              >
-                <option value="femme">Femme</option>
-                <option value="homme">Homme</option>
-              </select>
-            </div>
-
-            {/* Volume Pricing Section for Decants */}
-            {formData.category === "Decants" && (
-              <div className="pt-4 border-t border-primary/10">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold01 text-primary">
-                    Configuration des Decants
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() => setShowVolumePricing(!showVolumePricing)}
-                    className="flex items-center space-x-2 text-secondary hover:text-primary transition-colors text-sm"
-                  >
-                    <ChevronDown
-                      size={16}
-                      className={`transform transition-transform ${
-                        showVolumePricing ? "rotate-180" : ""
-                      }`}
-                    />
-                    <span>{showVolumePricing ? "Masquer" : "Afficher"}</span>
-                  </button>
-                </div>
-
-                {showVolumePricing && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    className="space-y-4 bg-primary/5 p-4 rounded-xl"
-                  >
-                    <div>
-                      <label className="block text-primary font-bold01 mb-2 text-sm">
-                        Tailles disponibles
-                      </label>
-                      <div className="flex flex-wrap gap-2">
-                        {["10ml", "20ml", "30ml", "5ml", "2ml"].map((size) => (
-                          <button
-                            key={size}
-                            type="button"
-                            onClick={() => handleAvailableSizeToggle(size)}
-                            className={`px-3 py-2 rounded-lg border transition-all duration-300 text-sm ${
-                              formData.availableSizes.includes(size)
-                                ? "bg-primary text-background border-primary"
-                                : "bg-background text-primary border-primary/20 hover:border-primary"
-                            }`}
-                          >
-                            {size}
-                          </button>
-                        ))}
-                      </div>
-                      <p className="text-primary/60 text-xs mt-2">
-                        Sélectionnez les tailles disponibles pour ce decant
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-primary font-bold01 mb-2 text-sm">
-                        Taille par défaut
-                      </label>
-                      <select
-                        value={formData.defaultVolume}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            defaultVolume: e.target.value,
-                          })
-                        }
-                        className="w-full p-2 border border-primary/20 rounded-lg focus:outline-none focus:border-secondary text-sm"
-                      >
-                        {formData.availableSizes.map((size) => (
-                          <option key={size} value={size}>
-                            {size}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-primary font-bold01 mb-3 text-sm">
-                        Prix par taille (DA)
-                      </label>
-                      <div className="space-y-3">
-                        {["10ml", "20ml", "30ml"].map((size) => (
-                          <div
-                            key={size}
-                            className="flex items-center justify-between"
-                          >
-                            <span className="text-primary font-bold01 text-sm w-16">
-                              {size}
-                            </span>
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={formData.volumePricing[size] || ""}
-                              onChange={(e) =>
-                                handleVolumePricingChange(size, e.target.value)
-                              }
-                              disabled={!formData.availableSizes.includes(size)}
-                              className={`w-32 p-2 border rounded-lg focus:outline-none text-sm ${
-                                !formData.availableSizes.includes(size)
-                                  ? "bg-primary/10 border-primary/10 text-primary/40 cursor-not-allowed"
-                                  : "border-primary/20 focus:border-secondary"
-                              }`}
-                              placeholder="Prix"
-                              required={formData.availableSizes.includes(size)}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                      <p className="text-primary/60 text-xs mt-2">
-                        * Définissez des prix différents pour chaque taille
-                      </p>
-                    </div>
-                  </motion.div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-primary font-bold01 mb-2 text-sm lg:text-base">
-                Image du Produit
-              </label>
-              <div className="border-2 border-dashed border-primary/20 rounded-xl p-4 lg:p-6 text-center hover:border-secondary transition-colors">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                  id="edit-image-upload"
-                />
-                <label
-                  htmlFor="edit-image-upload"
-                  className="cursor-pointer block"
-                >
-                  <Edit3 className="mx-auto text-primary/40 mb-2" size={32} />
-                  <p className="text-primary font-bold01 text-sm lg:text-base">
-                    Changer l'image
-                  </p>
-                  <p className="text-primary/60 text-xs mt-1">
-                    PNG, JPG, JPEG (Max. 5MB)
-                  </p>
-                </label>
-              </div>
-            </div>
-
-            {formData.image && (
-              <div className="text-center">
-                <label className="block text-primary font-bold01 mb-2 text-sm lg:text-base">
-                  Aperçu
-                </label>
-                <img
-                  src={formData.image}
-                  alt="Aperçu"
-                  className="w-32 h-32 lg:w-40 lg:h-40 rounded-lg object-cover border border-primary/20 mx-auto"
-                />
-              </div>
-            )}
-
-            {/* Price Summary for Decants */}
-            {formData.category === "Decants" && showVolumePricing && (
-              <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
-                <h4 className="font-bold01 text-primary text-sm mb-3">
-                  Récapitulatif des prix
-                </h4>
-                <div className="space-y-2">
-                  {Object.entries(formData.volumePricing)
-                    .filter(
-                      ([size, price]) =>
-                        price !== "" &&
-                        !isNaN(parseFloat(price)) &&
-                        formData.availableSizes.includes(size)
-                    )
-                    .map(([size, price]) => (
-                      <div
-                        key={size}
-                        className="flex justify-between items-center text-sm"
-                      >
-                        <span className="text-primary/80">{size}:</span>
-                        <span className="font-bold01 text-secondary">
-                          {parseFloat(price).toLocaleString("fr-FR")} DA
-                          {size === formData.defaultVolume && (
-                            <span className="ml-2 text-xs bg-secondary text-primary px-2 py-0.5 rounded">
-                              Défaut
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                    ))}
-                </div>
-                {formData.availableSizes.length === 0 && (
-                  <p className="text-red-600 text-xs mt-2">
-                    ⚠️ Vous devez sélectionner au moins une taille
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-3 pt-4">
-          <motion.button
-            type="submit"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            disabled={
-              formData.category === "Decants" &&
-              formData.availableSizes.length === 0
-            }
-            className={`flex-1 py-3 rounded-xl font-bold01 hover:shadow-lg transition-all duration-300 text-sm lg:text-base ${
-              formData.category === "Decants" &&
-              formData.availableSizes.length === 0
-                ? "bg-red-600 text-white cursor-not-allowed"
-                : "bg-secondary text-primary"
-            }`}
-          >
-            Sauvegarder
-          </motion.button>
-          <motion.button
-            type="button"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={onCancel}
-            className="flex-1 border border-primary/20 text-primary py-3 rounded-xl font-bold01 hover:border-secondary hover:text-secondary transition-all duration-300 text-sm lg:text-base"
-          >
-            Annuler
-          </motion.button>
-        </div>
-      </form>
     </motion.div>
   );
 };

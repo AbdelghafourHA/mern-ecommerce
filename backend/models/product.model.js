@@ -48,6 +48,12 @@ const productSchema = new mongoose.Schema(
       of: Number, // e.g., { "10ml": 1500, "20ml": 2500, "30ml": 3500 }
       default: {},
     },
+    // Store discounted volume prices separately
+    discountedVolumePricing: {
+      type: Map,
+      of: Number,
+      default: {},
+    },
     availableSizes: {
       type: [String],
       default: ["10ml", "20ml", "30ml"], // Default sizes for decants
@@ -59,6 +65,48 @@ const productSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Pre-save middleware to handle discount calculation
+productSchema.pre("save", function (next) {
+  // If discount is applied or removed, calculate new prices
+  if (this.discount >= 0 && this.discount <= 100) {
+    // For regular products
+    if (this.category !== "Decants") {
+      if (this.discount > 0) {
+        this.newPrice = Math.round(this.price * (1 - this.discount / 100));
+      } else {
+        this.newPrice = this.price;
+      }
+    }
+    // For decants
+    else {
+      if (this.discount > 0) {
+        // Calculate discounted base price (10ml)
+        this.newPrice = Math.round(this.price * (1 - this.discount / 100));
+
+        // Calculate discounted prices for all volumes
+        if (this.volumePricing && this.volumePricing.size > 0) {
+          const discountedVolumePricing = new Map();
+
+          for (const [volume, price] of this.volumePricing.entries()) {
+            const discountedPrice = Math.round(
+              price * (1 - this.discount / 100)
+            );
+            discountedVolumePricing.set(volume, discountedPrice);
+          }
+
+          this.discountedVolumePricing = discountedVolumePricing;
+        }
+      } else {
+        // No discount - reset prices
+        this.newPrice = this.price;
+        this.discountedVolumePricing = new Map();
+      }
+    }
+  }
+
+  next();
+});
 
 const Product = mongoose.model("Product", productSchema);
 

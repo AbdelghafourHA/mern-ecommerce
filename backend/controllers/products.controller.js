@@ -61,17 +61,22 @@ export const createProduct = async (req, res) => {
       });
     }
 
-    // Prepare volume pricing for decants
+    // For decants, ensure base price is 10ml price
+    let basePrice = price;
     let processedVolumePricing = {};
+
     if (category === "Decants" && volumePricing) {
-      // Convert volume pricing to Map format
+      // Use 10ml price as base price
+      basePrice = volumePricing["10ml"] || price;
+
+      // Store volume pricing
       processedVolumePricing = volumePricing;
     }
 
     const product = await Product.create({
       title,
       description,
-      price,
+      price: basePrice,
       image: cloudinaryResponse?.secure_url
         ? cloudinaryResponse.secure_url
         : "",
@@ -133,11 +138,17 @@ export const updateProduct = async (req, res) => {
       ...otherFields
     } = req.body;
 
+    // For decants, ensure base price is 10ml price
+    let basePrice = otherFields.price;
+    if (category === "Decants" && volumePricing["10ml"]) {
+      basePrice = volumePricing["10ml"];
+    }
+
     // Prepare update data
     const updateData = {
       ...otherFields,
+      price: basePrice,
       category,
-      // Always include these fields, they will be properly handled by the schema
       volumePricing: category === "Decants" ? volumePricing : {},
       availableSizes: category === "Decants" ? availableSizes : [],
       defaultVolume: category === "Decants" ? defaultVolume : null,
@@ -191,17 +202,44 @@ export const updateProductDiscount = async (req, res) => {
       return res.status(404).json({ message: "Produit non trouvé" });
     }
 
-    // Calculate new price based on base price (10ml price for decants)
-    let basePrice = product.price;
-    const newPrice =
-      discount > 0 ? Math.round(basePrice * (1 - discount / 100)) : basePrice;
+    let updateData = {
+      discount,
+    };
+
+    // For decants, apply discount to all volume prices
+    if (product.category === "Decants") {
+      // Calculate discounted base price (10ml)
+      const discountedBasePrice =
+        discount > 0
+          ? Math.round(product.price * (1 - discount / 100))
+          : product.price;
+
+      updateData.newPrice = discountedBasePrice;
+
+      // Calculate discounted prices for all volumes
+      if (product.volumePricing && product.volumePricing.size > 0) {
+        const discountedVolumePricing = new Map();
+
+        for (const [volume, price] of product.volumePricing.entries()) {
+          const discountedPrice =
+            discount > 0 ? Math.round(price * (1 - discount / 100)) : price;
+          discountedVolumePricing.set(volume, discountedPrice);
+        }
+
+        updateData.discountedVolumePricing = discountedVolumePricing;
+      }
+    } else {
+      // For regular products
+      const newPrice =
+        discount > 0
+          ? Math.round(product.price * (1 - discount / 100))
+          : product.price;
+      updateData.newPrice = newPrice;
+    }
 
     const updatedProduct = await Product.findByIdAndUpdate(
       productId,
-      {
-        discount,
-        newPrice,
-      },
+      updateData,
       { new: true }
     );
 
@@ -237,15 +275,58 @@ export const updateProductPricing = async (req, res) => {
       }
       updateData.discount = discount;
 
-      // Calculate new price based on base price
-      const basePrice = price !== undefined ? price : product.price;
-      updateData.newPrice =
-        discount > 0 ? Math.round(basePrice * (1 - discount / 100)) : basePrice;
+      // For decants, apply discount to all volumes
+      if (product.category === "Decants") {
+        const basePrice = price !== undefined ? price : product.price;
+        updateData.newPrice =
+          discount > 0
+            ? Math.round(basePrice * (1 - discount / 100))
+            : basePrice;
+
+        // Calculate discounted prices for all volumes
+        if (product.volumePricing && product.volumePricing.size > 0) {
+          const discountedVolumePricing = new Map();
+
+          for (const [
+            volume,
+            originalPrice,
+          ] of product.volumePricing.entries()) {
+            const discountedPrice =
+              discount > 0
+                ? Math.round(originalPrice * (1 - discount / 100))
+                : originalPrice;
+            discountedVolumePricing.set(volume, discountedPrice);
+          }
+
+          updateData.discountedVolumePricing = discountedVolumePricing;
+        }
+      } else {
+        // Regular products
+        const basePrice = price !== undefined ? price : product.price;
+        updateData.newPrice =
+          discount > 0
+            ? Math.round(basePrice * (1 - discount / 100))
+            : basePrice;
+      }
     }
 
     // Update volume pricing for decants
     if (product.category === "Decants" && volumePricing) {
       updateData.volumePricing = volumePricing;
+
+      // Update discounted prices if discount exists
+      if (product.discount > 0) {
+        const discountedVolumePricing = new Map();
+
+        for (const [volume, price] of Object.entries(volumePricing)) {
+          const discountedPrice = Math.round(
+            price * (1 - product.discount / 100)
+          );
+          discountedVolumePricing.set(volume, discountedPrice);
+        }
+
+        updateData.discountedVolumePricing = discountedVolumePricing;
+      }
     }
 
     const updatedProduct = await Product.findByIdAndUpdate(
@@ -283,18 +364,41 @@ export const applyDiscountToAll = async (req, res) => {
     }
 
     const updateOperations = products.map((product) => {
-      const newPrice =
-        discount > 0
-          ? Math.round(product.price * (1 - discount / 100))
-          : product.price;
+      const updateData = {
+        discount,
+      };
+
+      if (product.category === "Decants") {
+        // Apply discount to base price
+        updateData.newPrice =
+          discount > 0
+            ? Math.round(product.price * (1 - discount / 100))
+            : product.price;
+
+        // Apply discount to all volume prices
+        if (product.volumePricing && product.volumePricing.size > 0) {
+          const discountedVolumePricing = new Map();
+
+          for (const [volume, price] of product.volumePricing.entries()) {
+            const discountedPrice =
+              discount > 0 ? Math.round(price * (1 - discount / 100)) : price;
+            discountedVolumePricing.set(volume, discountedPrice);
+          }
+
+          updateData.discountedVolumePricing = discountedVolumePricing;
+        }
+      } else {
+        // Regular products
+        updateData.newPrice =
+          discount > 0
+            ? Math.round(product.price * (1 - discount / 100))
+            : product.price;
+      }
 
       return {
         updateOne: {
           filter: { _id: product._id },
-          update: {
-            discount,
-            newPrice,
-          },
+          update: { $set: updateData },
         },
       };
     });
@@ -331,12 +435,20 @@ export const removeDiscountFromAll = async (req, res) => {
     }
 
     const updateOperations = products.map((product) => {
+      const updateData = {
+        discount: 0,
+        newPrice: product.price,
+      };
+
+      // For decants, reset discounted volume pricing
+      if (product.category === "Decants") {
+        updateData.discountedVolumePricing = new Map();
+      }
+
       return {
         updateOne: {
           filter: { _id: product._id },
-          update: {
-            $set: { discount: 0, newPrice: product.price },
-          },
+          update: { $set: updateData },
         },
       };
     });
@@ -357,7 +469,7 @@ export const removeDiscountFromAll = async (req, res) => {
   }
 };
 
-// NEW: Get price for specific volume
+// Get price for specific volume
 export const getVolumePrice = async (req, res) => {
   try {
     const { productId, volume } = req.params;
@@ -375,23 +487,37 @@ export const getVolumePrice = async (req, res) => {
     }
 
     // Get price for specific volume
-    const volumePrice = product.volumePricing?.get(volume) || product.price;
+    const volumePrice = product.volumePricing?.get(volume);
 
-    // Apply discount if any
+    if (!volumePrice) {
+      return res
+        .status(404)
+        .json({ message: `Prix pour ${volume} non trouvé` });
+    }
+
+    // Check if we have discounted price
     let finalPrice = volumePrice;
+    let hasDiscount = false;
+
     if (product.discount > 0) {
-      finalPrice =
-        product.newPrice > 0
-          ? product.newPrice
-          : Math.round(volumePrice * (1 - product.discount / 100));
+      // Use discounted volume price if available
+      const discountedPrice = product.discountedVolumePricing?.get(volume);
+      if (discountedPrice) {
+        finalPrice = discountedPrice;
+        hasDiscount = true;
+      } else {
+        // Fallback: calculate discount manually
+        finalPrice = Math.round(volumePrice * (1 - product.discount / 100));
+        hasDiscount = true;
+      }
     }
 
     res.json({
       volume,
-      basePrice: volumePrice,
+      originalPrice: volumePrice,
       finalPrice,
       discount: product.discount,
-      hasDiscount: product.discount > 0,
+      hasDiscount,
     });
   } catch (error) {
     console.error("Error getting volume price:", error);

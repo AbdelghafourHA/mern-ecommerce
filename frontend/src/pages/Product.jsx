@@ -42,26 +42,13 @@ const Product = () => {
   const calculateUnitPrice = () => {
     if (!product || !product.price) return 0;
 
-    let price = product.price;
-
-    // For decants, use volume pricing if available
-    if (
-      product.category === "Decants" &&
-      selectedSize &&
-      product.volumePricing
-    ) {
-      // Convert Map to object if needed
-      const volumePricing =
-        product.volumePricing instanceof Map
-          ? Object.fromEntries(product.volumePricing)
-          : product.volumePricing;
-
-      // Get price for selected volume
-      const volumePrice = volumePricing?.[selectedSize];
-      if (volumePrice) {
-        price = volumePrice;
-      }
+    // For decants with selected size
+    if (product.category === "Decants" && selectedSize) {
+      return getVolumePrice(selectedSize);
     }
+
+    // For regular products or decants without size selection
+    let price = product.price;
 
     // Apply discount if any
     if (product.discount > 0) {
@@ -71,6 +58,85 @@ const Product = () => {
     }
 
     return price;
+  };
+
+  // Get price for a specific volume (for display)
+  const getVolumePrice = (size) => {
+    if (!product || !product.volumePricing || product.category !== "Decants") {
+      return calculateUnitPrice();
+    }
+
+    // Handle both Map and object formats
+    let volumePricing;
+    if (
+      product.volumePricing instanceof Map ||
+      product.volumePricing[Symbol.iterator]
+    ) {
+      try {
+        volumePricing = Object.fromEntries(product.volumePricing);
+      } catch {
+        volumePricing = {};
+      }
+    } else {
+      volumePricing = product.volumePricing || {};
+    }
+
+    // Check if we have discounted volume prices
+    let discountedVolumePricing = {};
+    if (product.discountedVolumePricing) {
+      if (
+        product.discountedVolumePricing instanceof Map ||
+        product.discountedVolumePricing[Symbol.iterator]
+      ) {
+        try {
+          discountedVolumePricing = Object.fromEntries(
+            product.discountedVolumePricing
+          );
+        } catch {
+          discountedVolumePricing = {};
+        }
+      } else {
+        discountedVolumePricing = product.discountedVolumePricing || {};
+      }
+    }
+
+    const volumePrice = volumePricing[size];
+
+    // If discount exists and we have discounted price, use it
+    if (product.discount > 0 && discountedVolumePricing[size]) {
+      return discountedVolumePricing[size];
+    }
+
+    // Fallback: apply discount calculation
+    if (product.discount > 0 && volumePrice) {
+      return Math.round(volumePrice * (1 - product.discount / 100));
+    }
+
+    return volumePrice || calculateUnitPrice();
+  };
+
+  // Get original price before discount for a specific volume
+  const getOriginalVolumePrice = (size) => {
+    if (!product || !product.volumePricing || product.category !== "Decants") {
+      return product?.price || 0;
+    }
+
+    // Handle both Map and object formats
+    let volumePricing;
+    if (
+      product.volumePricing instanceof Map ||
+      product.volumePricing[Symbol.iterator]
+    ) {
+      try {
+        volumePricing = Object.fromEntries(product.volumePricing);
+      } catch {
+        volumePricing = {};
+      }
+    } else {
+      volumePricing = product.volumePricing || {};
+    }
+
+    return volumePricing[size] || product.price;
   };
 
   // Direct checkout - only this product
@@ -123,7 +189,7 @@ const Product = () => {
       // ADD VOLUME TO THE CART ITEM
       volume: product.category === "Decants" ? selectedSize : null,
       // ADD THE CALCULATED UNIT PRICE
-      originalPrice: product.price, // Keep original price for reference
+      originalPrice: getOriginalVolumePrice(selectedSize) || product.price, // Keep original price for reference
       price: unitPrice, // Use the calculated price based on size
     };
 
@@ -142,41 +208,6 @@ const Product = () => {
       return product.availableSizes || ["10ml", "20ml", "30ml"];
     }
     return [];
-  };
-
-  // Get price for a specific volume (for display)
-  const getVolumePrice = (size) => {
-    if (!product || !product.volumePricing || product.category !== "Decants") {
-      return calculateUnitPrice();
-    }
-
-    // Handle both Map and object formats
-    let volumePricing;
-    if (
-      product.volumePricing instanceof Map ||
-      product.volumePricing[Symbol.iterator]
-    ) {
-      try {
-        volumePricing = Object.fromEntries(product.volumePricing);
-      } catch {
-        volumePricing = {};
-      }
-    } else {
-      volumePricing = product.volumePricing || {};
-    }
-
-    const volumePrice = volumePricing[size];
-    if (volumePrice) {
-      // Apply discount if any
-      if (product.discount > 0) {
-        return product.newPrice > 0
-          ? product.newPrice
-          : Math.round(volumePrice * (1 - product.discount / 100));
-      }
-      return volumePrice;
-    }
-
-    return calculateUnitPrice();
   };
 
   // Show loading state
@@ -315,26 +346,31 @@ const Product = () => {
                   Sélectionner la taille:
                 </h3>
                 <div className="flex flex-wrap gap-2 sm:gap-3">
-                  {availableSizes.map((size) => (
-                    <motion.button
-                      key={size}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setSelectedSize(size)}
-                      className={`cursor-pointer px-4 sm:px-5 py-2 sm:py-3 rounded-lg font-semibold transition-all duration-300 border text-sm sm:text-base ${
-                        selectedSize === size
-                          ? "bg-primary text-background border-primary"
-                          : "bg-background text-primary border-primary/20 hover:border-primary"
-                      }`}
-                    >
-                      {size}
-                      {isDecant && product.volumePricing && (
-                        <span className="block text-xs mt-1 opacity-75">
-                          {formatPrice(getVolumePrice(size))}
-                        </span>
-                      )}
-                    </motion.button>
-                  ))}
+                  {availableSizes.map((size) => {
+                    const isSelected = selectedSize === size;
+                    const originalPrice = getOriginalVolumePrice(size);
+                    const discountedPrice = getVolumePrice(size);
+                    const showDiscount =
+                      hasDiscount && discountedPrice < originalPrice;
+
+                    return (
+                      <motion.button
+                        key={size}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setSelectedSize(size)}
+                        className={`cursor-pointer px-4 sm:px-5 py-2 sm:py-3 rounded-lg font-semibold transition-all duration-300 border text-sm sm:text-base ${
+                          isSelected
+                            ? "bg-primary text-background border-primary"
+                            : "bg-background text-primary border-primary/20 hover:border-primary"
+                        }`}
+                      >
+                        <div className="flex flex-col items-center">
+                          <span>{size}</span>
+                        </div>
+                      </motion.button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -353,44 +389,22 @@ const Product = () => {
                 </span>
 
                 {/* Original Price if discounted */}
-                {hasDiscount && (
+                {hasDiscount && isDecant && selectedSize && (
                   <span className="text-lg sm:text-xl text-primary/60 line-through">
-                    {formatPrice(
-                      isDecant && selectedSize && product.volumePricing
-                        ? (() => {
-                            // Handle both Map and object formats
-                            let volumePricing;
-                            if (
-                              product.volumePricing instanceof Map ||
-                              product.volumePricing[Symbol.iterator]
-                            ) {
-                              try {
-                                volumePricing = Object.fromEntries(
-                                  product.volumePricing
-                                );
-                              } catch {
-                                volumePricing = {};
-                              }
-                            } else {
-                              volumePricing = product.volumePricing || {};
-                            }
-                            return volumePricing[selectedSize] || product.price;
-                          })()
-                        : product.price
-                    )}
-                    {isDecant && selectedSize && (
-                      <span className="text-sm ml-1">/{selectedSize}</span>
-                    )}
+                    {formatPrice(getOriginalVolumePrice(selectedSize))}
+                    <span className="text-sm ml-1">/{selectedSize}</span>
                   </span>
                 )}
               </div>
 
-              {/* Size-based pricing info for decants */}
-              {isDecant && product.volumePricing && (
+              {/* Discount information */}
+              {hasDiscount && isDecant && (
                 <div className="bg-accent/10 p-3 sm:p-4 rounded-xl border border-accent/20">
                   <p className="text-sm sm:text-base text-primary/70">
-                    <span className="font-semibold">Tarification:</span> Chaque
-                    taille a son propre prix.
+                    <span className="font-semibold">
+                      Remise de {product.discount}% appliquée
+                    </span>{" "}
+                    sur toutes les tailles.
                     {selectedSize && (
                       <>
                         <br />
@@ -446,19 +460,19 @@ const Product = () => {
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="cursor-pointer w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold01 text-base sm:text-lg hover:bg-primary/20 transition-colors border border-primary/20"
+                  className="cursor-pointer w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-p01 text-base sm:text-lg hover:bg-primary/20 transition-colors border border-primary/20"
                   aria-label="Réduire la quantité"
                 >
                   -
                 </motion.button>
-                <span className="text-primary font-bold01 text-xl sm:text-2xl w-10 sm:w-12 text-center bg-primary/5 py-2 rounded-lg">
+                <span className="text-primary font-p01 text-xl sm:text-2xl w-10 sm:w-12 text-center bg-primary/5 py-2 rounded-lg">
                   {quantity}
                 </span>
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() => setQuantity(quantity + 1)}
-                  className="cursor-pointer w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold01 text-base sm:text-lg hover:bg-primary/20 transition-colors border border-primary/20"
+                  className="cursor-pointer w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-p01 text-base sm:text-lg hover:bg-primary/20 transition-colors border border-primary/20"
                   aria-label="Augmenter la quantité"
                 >
                   +

@@ -130,7 +130,7 @@ const Home = () => {
                       <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-background mb-2">
                         {category.name}
                       </h3>
-                      <p className="text-background/80 text-xs sm:text-sm mb-2 md:mb-3">
+                      <p className="text-background/80 text-xs sm:text-sm mb-2 md:mb-3 font-p01 font-semibold">
                         {category.description}
                       </p>
                       <div className="flex flex-wrap gap-1 md:gap-2">

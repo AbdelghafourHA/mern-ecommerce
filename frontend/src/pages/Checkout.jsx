@@ -200,7 +200,7 @@ const Checkout = () => {
           <div className="flex items-center justify-between mb-4">
             <button
               onClick={() => navigate(-1)}
-              className="cursor-pointer flex items-center space-x-2 text-primary hover:text-secondary transition-colors font-bold01 text-sm sm:text-base"
+              className="cursor-pointer flex items-center space-x-2 text-primary hover:text-secondary transition-colors font-p01 text-sm sm:text-base"
             >
               <ArrowLeft size={18} className="sm:w-5 sm:h-5" />
               <span>Retour</span>
@@ -361,11 +361,6 @@ const Checkout = () => {
                 <h3 className="text-lg sm:text-xl font-bold text-primary font-p01">
                   Résumé de la Commande
                 </h3>
-                {isDirectCheckout && (
-                  <span className="bg-primary/10 text-primary text-xs px-2 py-1 rounded-full">
-                    1 produit
-                  </span>
-                )}
               </div>
 
               {/* Order Items */}
@@ -383,12 +378,12 @@ const Checkout = () => {
                         className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg object-cover flex-shrink-0"
                       />
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-primary font-bold01 text-xs sm:text-sm line-clamp-2">
+                        <h4 className="font-semibold text-primary font-bold01 text-sm sm:text-base line-clamp-2">
                           {item.title}
                         </h4>
                         <div className="flex justify-between items-center mt-1">
                           <div>
-                            <span className="text-secondary font-bold01 text-sm sm:text-base">
+                            <span className="text-secondary font-p01 text-sm sm:text-base">
                               {formatPrice(item.unitPrice || item.price)}
                             </span>
                             {/* Display volume in checkout */}
@@ -398,7 +393,7 @@ const Checkout = () => {
                               </span>
                             )}
                           </div>
-                          <span className="text-primary/60 text-xs sm:text-sm font-bold01">
+                          <span className="text-primary/60 text-xs sm:text-sm font-p01">
                             x{item.quantity}
                           </span>
                         </div>
@@ -414,11 +409,11 @@ const Checkout = () => {
                   <span>
                     Sous-total ({itemCount} article{itemCount > 1 ? "s" : ""})
                   </span>
-                  <span>{formatPrice(subtotal)}</span>
+                  <span className="font-p01">{formatPrice(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-primary font-bold01 text-sm sm:text-base">
                   <span>Livraison</span>
-                  <span>{formatPrice(shipping)}</span>
+                  <span className="font-p01">{formatPrice(shipping)}</span>
                 </div>
                 <div className="border-t border-primary/10 pt-2 sm:pt-3">
                   <div className="flex justify-between text-base sm:text-lg font-bold text-primary font-p01">
@@ -532,7 +527,7 @@ const Checkout = () => {
                         !formData.email ||
                         !formData.phone
                       }
-                      className="cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed w-full bg-secondary text-primary py-3 sm:py-4 rounded-xl font-bold01 text-sm sm:text-base hover:shadow-lg transition-all duration-300"
+                      className="cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed w-full bg-secondary text-primary py-3 sm:py-4 rounded-xl font-p01 text-sm sm:text-base hover:shadow-lg transition-all duration-300"
                     >
                       Continuer vers la Livraison
                     </motion.button>
@@ -669,7 +664,7 @@ const Checkout = () => {
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={handlePreviousStep}
-                        className="flex-1 border border-primary/20 text-primary py-2 sm:py-3 rounded-xl font-bold01 hover:border-secondary hover:text-secondary transition-all duration-300 text-sm sm:text-base"
+                        className="flex-1 border border-primary/20 text-primary py-2 sm:py-3 rounded-xl font-p01 hover:border-secondary hover:text-secondary transition-all duration-300 text-sm sm:text-base"
                       >
                         Retour
                       </motion.button>
@@ -683,7 +678,7 @@ const Checkout = () => {
                           !formData.commune ||
                           !formData.address
                         }
-                        className="flex-1 bg-secondary text-primary py-2 sm:py-3 rounded-xl font-bold01 hover:shadow-lg transition-all duration-300 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 bg-secondary text-primary py-2 sm:py-3 rounded-xl font-p01 hover:shadow-lg transition-all duration-300 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Continuer vers le Paiement
                       </motion.button>
@@ -726,7 +721,7 @@ const Checkout = () => {
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={handlePreviousStep}
-                        className="flex-1 border border-primary/20 text-primary py-2 sm:py-3 rounded-xl font-bold01 hover:border-secondary hover:text-secondary transition-all duration-300 text-sm sm:text-base"
+                        className="flex-1 border border-primary/20 text-primary py-2 sm:py-3 rounded-xl font-p01 hover:border-secondary hover:text-secondary transition-all duration-300 text-sm sm:text-base"
                       >
                         Retour
                       </motion.button>
@@ -734,7 +729,7 @@ const Checkout = () => {
                         type="submit"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        className="flex-1 bg-secondary text-primary py-2 sm:py-3 rounded-xl font-bold01 hover:shadow-lg transition-all duration-300 text-sm sm:text-base"
+                        className="flex-1 bg-secondary text-primary py-2 sm:py-3 rounded-xl font-p01 hover:shadow-lg transition-all duration-300 text-sm sm:text-base"
                       >
                         Confirmer la Commande
                       </motion.button>
