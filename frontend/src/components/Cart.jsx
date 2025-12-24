@@ -16,7 +16,73 @@ const Cart = () => {
 
   const formatPrice = (price) => `${price.toLocaleString("fr-FR")} DA`;
 
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  // Function to get the correct price for a cart item
+  const getCartItemPrice = (item) => {
+    // For decants
+    if (item.category === "Decants") {
+      // Check if we have a discounted price for the selected volume
+      if (
+        item.discount > 0 &&
+        item.discountedVolumePricing &&
+        item.selectedSize
+      ) {
+        // Try to get discounted price from discountedVolumePricing
+        let discountedVolumePricing = {};
+        if (
+          item.discountedVolumePricing instanceof Map ||
+          item.discountedVolumePricing[Symbol.iterator]
+        ) {
+          try {
+            discountedVolumePricing = Object.fromEntries(
+              item.discountedVolumePricing
+            );
+          } catch {
+            discountedVolumePricing = {};
+          }
+        } else {
+          discountedVolumePricing = item.discountedVolumePricing || {};
+        }
+
+        const discountedPrice = discountedVolumePricing[item.selectedSize];
+        if (discountedPrice) {
+          return discountedPrice;
+        }
+      }
+
+      // Fallback: use volume price and apply discount
+      let volumePricing = {};
+      if (
+        item.volumePricing instanceof Map ||
+        item.volumePricing[Symbol.iterator]
+      ) {
+        try {
+          volumePricing = Object.fromEntries(item.volumePricing);
+        } catch {
+          volumePricing = {};
+        }
+      } else {
+        volumePricing = item.volumePricing || {};
+      }
+
+      const volumePrice = volumePricing[item.selectedSize] || item.price;
+      return item.discount > 0
+        ? Math.round(volumePrice * (1 - item.discount / 100))
+        : volumePrice;
+    }
+
+    // For regular products
+    return item.discount > 0
+      ? item.newPrice > 0
+        ? item.newPrice
+        : Math.round(item.price * (1 - item.discount / 100))
+      : item.price;
+  };
+
+  // Calculate total using the correct price for each item
+  const total = cart.reduce((sum, item) => {
+    const itemPrice = getCartItemPrice(item);
+    return sum + itemPrice * item.quantity;
+  }, 0);
 
   return (
     <AnimatePresence>
@@ -37,7 +103,7 @@ const Cart = () => {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="fixed top-0 right-0 bottom-0 w-full sm:w-96 bg-background z-50 overflow-y-auto shadow-2xl"
+            className="fixed top-0 right-0 bottom-0 w-full sm:w-105 bg-background z-50 overflow-y-auto shadow-2xl"
           >
             {/* Header */}
             <div className="bg-primary text-background p-4 sm:p-6">
@@ -100,87 +166,134 @@ const Cart = () => {
                 <>
                   <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
                     <AnimatePresence>
-                      {cart.map((item) => (
-                        <motion.div
-                          key={item._id}
-                          layout
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.9, x: 100 }}
-                          className="bg-white rounded-xl p-3 sm:p-4 shadow-lg border border-primary/10"
-                        >
-                          <div className="flex space-x-3 sm:space-x-4">
-                            {/* Product Image */}
-                            <img
-                              src={item.image}
-                              alt={item.title}
-                              className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover flex-shrink-0"
-                            />
+                      {cart.map((item) => {
+                        const itemPrice = getCartItemPrice(item);
 
-                            {/* Product Details */}
-                            <div className="flex-1 min-w-0">
-                              <h3 className="text-primary font-bold01 font-bold text-sm sm:text-sm lg:text-base line-clamp-2 mb-1">
-                                {item.title}
-                              </h3>
-                              <p className="text-primary/60 text-xs font-bold01 capitalize mb-2">
-                                {item.gender} • {item.category}
-                                {/* Display volume if it exists */}
-                                {item.volume && (
-                                  <span className="ml-2 bg-secondary/20 text-secondary px-2 py-0.5 rounded text-xs font-semibold">
-                                    {item.volume}
-                                  </span>
-                                )}
-                              </p>
+                        return (
+                          <motion.div
+                            key={item._id}
+                            layout
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9, x: 100 }}
+                            className="bg-white rounded-xl p-3 sm:p-4 shadow-lg border border-primary/10"
+                          >
+                            <div className="flex space-x-3 sm:space-x-4">
+                              {/* Product Image */}
+                              <img
+                                src={item.image}
+                                alt={item.title}
+                                className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover flex-shrink-0"
+                              />
 
-                              {/* Price & Quantity */}
-                              <div className="flex items-center justify-between">
-                                <span className="text-base sm:text-lg font-bold text-secondary font-p01">
-                                  {formatPrice(item.price)}
-                                </span>
+                              {/* Product Details */}
+                              <div className="flex-1 min-w-0">
+                                <h3 className="text-primary font-bold01 font-bold text-sm sm:text-sm lg:text-base line-clamp-2 mb-1">
+                                  {item.title}
+                                </h3>
+                                <p className="text-primary/60 text-xs font-bold01 capitalize mb-2">
+                                  {item.gender} • {item.category}
+                                  {/* Display volume if it exists */}
+                                  {(item.selectedSize || item.volume) && (
+                                    <span className="ml-2 bg-secondary/20 text-secondary px-2 py-0.5 rounded text-xs font-semibold">
+                                      {item.selectedSize || item.volume}
+                                    </span>
+                                  )}
+                                </p>
 
-                                <div className="flex items-center space-x-1 sm:space-x-2">
+                                {/* Price & Quantity */}
+                                <div className="flex items-center justify-between">
+                                  <div className="flex flex-col">
+                                    <span className="text-base sm:text-lg font-bold text-secondary font-p01">
+                                      {formatPrice(itemPrice)}
+                                    </span>
+                                    {item.discount > 0 && (
+                                      <span className="text-xs text-primary/60 line-through">
+                                        {item.category === "Decants" &&
+                                        item.selectedSize
+                                          ? (() => {
+                                              // Get original price before discount
+                                              let volumePricing = {};
+                                              if (
+                                                item.volumePricing instanceof
+                                                  Map ||
+                                                item.volumePricing[
+                                                  Symbol.iterator
+                                                ]
+                                              ) {
+                                                try {
+                                                  volumePricing =
+                                                    Object.fromEntries(
+                                                      item.volumePricing
+                                                    );
+                                                } catch {
+                                                  volumePricing = {};
+                                                }
+                                              } else {
+                                                volumePricing =
+                                                  item.volumePricing || {};
+                                              }
+                                              const originalPrice =
+                                                volumePricing[
+                                                  item.selectedSize
+                                                ] || item.price;
+                                              return formatPrice(originalPrice);
+                                            })()
+                                          : formatPrice(item.price)}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className="flex items-center space-x-1 sm:space-x-2">
+                                    <motion.button
+                                      whileHover={{ scale: 1.1 }}
+                                      whileTap={{ scale: 0.9 }}
+                                      onClick={() => decreaseQuantity(item._id)}
+                                      className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20 transition-colors"
+                                    >
+                                      <Minus
+                                        size={12}
+                                        className="sm:w-3 sm:h-3"
+                                      />
+                                    </motion.button>
+
+                                    <span className="w-6 sm:w-8 text-center font-bold text-primary font-p01 text-xs sm:text-sm">
+                                      {item.quantity}
+                                    </span>
+
+                                    <motion.button
+                                      whileHover={{ scale: 1.1 }}
+                                      whileTap={{ scale: 0.9 }}
+                                      onClick={() => increaseQuantity(item._id)}
+                                      className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20 transition-colors"
+                                    >
+                                      <Plus
+                                        size={12}
+                                        className="sm:w-3 sm:h-3"
+                                      />
+                                    </motion.button>
+                                  </div>
+                                </div>
+
+                                {/* Remove Item */}
+                                <div className="flex items-center justify-end mt-2">
                                   <motion.button
                                     whileHover={{ scale: 1.1 }}
                                     whileTap={{ scale: 0.9 }}
-                                    onClick={() => decreaseQuantity(item._id)}
-                                    className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20 transition-colors"
+                                    onClick={() => removeFromCart(item._id)}
+                                    className="text-secondary hover:text-primary transition-colors p-1"
                                   >
-                                    <Minus
-                                      size={12}
-                                      className="sm:w-3 sm:h-3"
+                                    <Trash2
+                                      size={14}
+                                      className="sm:w-4 sm:h-4"
                                     />
-                                  </motion.button>
-
-                                  <span className="w-6 sm:w-8 text-center font-bold text-primary font-p01 text-xs sm:text-sm">
-                                    {item.quantity}
-                                  </span>
-
-                                  <motion.button
-                                    whileHover={{ scale: 1.1 }}
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={() => increaseQuantity(item._id)}
-                                    className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20 transition-colors"
-                                  >
-                                    <Plus size={12} className="sm:w-3 sm:h-3" />
                                   </motion.button>
                                 </div>
                               </div>
-
-                              {/* Remove Item */}
-                              <div className="flex items-center justify-end mt-2">
-                                <motion.button
-                                  whileHover={{ scale: 1.1 }}
-                                  whileTap={{ scale: 0.9 }}
-                                  onClick={() => removeFromCart(item._id)}
-                                  className="text-secondary hover:text-primary transition-colors p-1"
-                                >
-                                  <Trash2 size={14} className="sm:w-4 sm:h-4" />
-                                </motion.button>
-                              </div>
                             </div>
-                          </div>
-                        </motion.div>
-                      ))}
+                          </motion.div>
+                        );
+                      })}
                     </AnimatePresence>
                   </div>
 

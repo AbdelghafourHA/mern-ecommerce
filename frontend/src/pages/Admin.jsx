@@ -2143,7 +2143,7 @@ const OrderDetails = ({ order, onBack, formatPrice }) => {
                       className="w-12 h-12 lg:w-16 lg:h-16 rounded-lg object-cover"
                     />
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-primary font-bold01 text-sm lg:text-base line-clamp-2">
+                      <h4 className="font-semibold text-primary font-bold01 text-base lg:text-lg font-bold line-clamp-2">
                         {item.name}
                       </h4>
                       <div className="flex items-center space-x-2 mt-1">
@@ -2157,10 +2157,17 @@ const OrderDetails = ({ order, onBack, formatPrice }) => {
                           </span>
                         )}
                       </div>
+                      {/* Show original price if there was a discount */}
+                      {order.checkoutType === "direct" &&
+                        item.originalPrice && (
+                          <p className="text-primary/60 text-xs line-through mt-1">
+                            Prix original: {formatPrice(item.originalPrice)}
+                          </p>
+                        )}
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-secondary font-bold font-bold01 text-sm lg:text-base">
+                    <p className="text-secondary font-bold p01 text-sm lg:text-base">
                       {formatPrice(item.price * item.quantity)}
                     </p>
                     <p className="text-primary/60 text-xs">
@@ -2179,28 +2186,26 @@ const OrderDetails = ({ order, onBack, formatPrice }) => {
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <p className="text-primary/60 text-xs font-bold01">
-                  Nom complet
-                </p>
-                <p className="text-primary font-semibold font-bold01 text-sm">
+                <p className="text-primary/60 text-xs font-p01">Nom complet</p>
+                <p className="text-primary font-semibold font-p01 text-sm">
                   {order.firstName} {order.lastName}
                 </p>
               </div>
               <div>
-                <p className="text-primary/60 text-xs font-bold01">Email</p>
-                <p className="text-primary font-semibold font-bold01 text-sm break-all">
+                <p className="text-primary/60 text-xs font-p01">Email</p>
+                <p className="text-primary font-semibold font-p01 text-sm break-all">
                   {order.email}
                 </p>
               </div>
               <div>
-                <p className="text-primary/60 text-xs font-bold01">Téléphone</p>
-                <p className="text-primary font-semibold font-bold01 text-sm">
+                <p className="text-primary/60 text-xs font-p01">Téléphone</p>
+                <p className="text-primary font-semibold font-p01 text-sm">
                   +213{order.phone}
                 </p>
               </div>
               <div>
-                <p className="text-primary/60 text-xs font-bold01">Date</p>
-                <p className="text-primary font-semibold font-bold01 text-sm">
+                <p className="text-primary/60 text-xs font-p01">Date</p>
+                <p className="text-primary font-semibold font-p01 text-sm">
                   {new Date(order.createdAt).toLocaleDateString("fr-FR", {
                     day: "numeric",
                     month: "short",
@@ -2210,6 +2215,18 @@ const OrderDetails = ({ order, onBack, formatPrice }) => {
                   })}
                 </p>
               </div>
+              {order.checkoutType && (
+                <div>
+                  <p className="text-primary/60 text-xs font-p01">
+                    Type de commande
+                  </p>
+                  <p className="text-primary font-semibold font-p01 text-sm">
+                    {order.checkoutType === "direct"
+                      ? "Achat direct"
+                      : "Panier"}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -2254,7 +2271,7 @@ const OrderDetails = ({ order, onBack, formatPrice }) => {
             <div className="space-y-3">
               <div>
                 <p className="text-primary/60 text-xs font-bold01">Adresse</p>
-                <p className="text-primary font-semibold font-bold01 text-sm">
+                <p className="text-primary font-semibold font-p01 text-sm">
                   {order.address}
                 </p>
               </div>
@@ -2262,14 +2279,14 @@ const OrderDetails = ({ order, onBack, formatPrice }) => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-primary/60 text-xs font-bold01">Wilaya</p>
-                  <p className="text-primary font-semibold font-bold01 text-sm">
+                  <p className="text-primary font-semibold font-p01 text-sm">
                     {order.willaya}
                   </p>
                 </div>
 
                 <div>
                   <p className="text-primary/60 text-xs font-bold01">Commune</p>
-                  <p className="text-primary font-semibold font-bold01 text-sm">
+                  <p className="text-primary font-semibold font-p01 text-sm">
                     {order.commune}
                   </p>
                 </div>
@@ -2277,7 +2294,7 @@ const OrderDetails = ({ order, onBack, formatPrice }) => {
 
               <div>
                 <p className="text-primary/60 text-xs font-bold01">Type</p>
-                <p className="text-primary font-semibold font-bold01 text-sm">
+                <p className="text-primary font-semibold font-p01 text-sm">
                   {order.deliveryType === "home" ? "🏠 Domicile" : "🏢 Bureau"}
                 </p>
               </div>
@@ -2291,13 +2308,13 @@ const OrderDetails = ({ order, onBack, formatPrice }) => {
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-primary/60">Sous-total:</span>
-                <span className="font-bold01">
+                <span className="font-p01">
                   {formatPrice(order.subtotalPrice || 0)}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-primary/60">Livraison:</span>
-                <span className="font-bold01">
+                <span className="font-p01">
                   {formatPrice(order.shippingPrice || 0)}
                 </span>
               </div>

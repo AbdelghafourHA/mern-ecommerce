@@ -43,8 +43,63 @@ const Checkout = () => {
       setIsDirectCheckout(false);
       setItems(cart);
 
-      // Calculate totals
+      // Calculate totals with proper discount handling for decants
       const newTotal = cart.reduce((sum, item) => {
+        // For decants, use the correct price based on volume and discount
+        if (item.category === "Decants") {
+          // Check if we have a discounted price for the selected volume
+          if (
+            item.discount > 0 &&
+            item.discountedVolumePricing &&
+            item.selectedSize
+          ) {
+            // Try to get discounted price from discountedVolumePricing
+            let discountedVolumePricing = {};
+            if (
+              item.discountedVolumePricing instanceof Map ||
+              item.discountedVolumePricing[Symbol.iterator]
+            ) {
+              try {
+                discountedVolumePricing = Object.fromEntries(
+                  item.discountedVolumePricing
+                );
+              } catch {
+                discountedVolumePricing = {};
+              }
+            } else {
+              discountedVolumePricing = item.discountedVolumePricing || {};
+            }
+
+            const discountedPrice = discountedVolumePricing[item.selectedSize];
+            if (discountedPrice) {
+              return sum + discountedPrice * item.quantity;
+            }
+          }
+
+          // Fallback: use volume price and apply discount manually
+          let volumePricing = {};
+          if (
+            item.volumePricing instanceof Map ||
+            item.volumePricing[Symbol.iterator]
+          ) {
+            try {
+              volumePricing = Object.fromEntries(item.volumePricing);
+            } catch {
+              volumePricing = {};
+            }
+          } else {
+            volumePricing = item.volumePricing || {};
+          }
+
+          const volumePrice = volumePricing[item.selectedSize] || item.price;
+          const finalPrice =
+            item.discount > 0
+              ? Math.round(volumePrice * (1 - item.discount / 100))
+              : volumePrice;
+          return sum + finalPrice * item.quantity;
+        }
+
+        // For regular products
         const price =
           item.discount > 0
             ? item.newPrice > 0
@@ -107,6 +162,68 @@ const Checkout = () => {
     return `${price.toLocaleString("fr-FR")} DA`;
   };
 
+  // Function to get the correct price for an item
+  const getItemPrice = (item) => {
+    // For decants
+    if (item.category === "Decants") {
+      // Check if we have a discounted price for the selected volume
+      if (
+        item.discount > 0 &&
+        item.discountedVolumePricing &&
+        item.selectedSize
+      ) {
+        // Try to get discounted price from discountedVolumePricing
+        let discountedVolumePricing = {};
+        if (
+          item.discountedVolumePricing instanceof Map ||
+          item.discountedVolumePricing[Symbol.iterator]
+        ) {
+          try {
+            discountedVolumePricing = Object.fromEntries(
+              item.discountedVolumePricing
+            );
+          } catch {
+            discountedVolumePricing = {};
+          }
+        } else {
+          discountedVolumePricing = item.discountedVolumePricing || {};
+        }
+
+        const discountedPrice = discountedVolumePricing[item.selectedSize];
+        if (discountedPrice) {
+          return discountedPrice;
+        }
+      }
+
+      // Fallback: use volume price and apply discount
+      let volumePricing = {};
+      if (
+        item.volumePricing instanceof Map ||
+        item.volumePricing[Symbol.iterator]
+      ) {
+        try {
+          volumePricing = Object.fromEntries(item.volumePricing);
+        } catch {
+          volumePricing = {};
+        }
+      } else {
+        volumePricing = item.volumePricing || {};
+      }
+
+      const volumePrice = volumePricing[item.selectedSize] || item.price;
+      return item.discount > 0
+        ? Math.round(volumePrice * (1 - item.discount / 100))
+        : volumePrice;
+    }
+
+    // For regular products
+    return item.discount > 0
+      ? item.newPrice > 0
+        ? item.newPrice
+        : Math.round(item.price * (1 - item.discount / 100))
+      : item.price;
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -147,10 +264,13 @@ const Checkout = () => {
       name: item.title,
       quantity: item.quantity,
       image: item.image,
-      price: item.unitPrice || item.price,
+      price: getItemPrice(item), // Use the correct price calculation
       product: item._id,
       // ADD VOLUME TO ORDER ITEMS
-      volume: item.volume || (item.category === "Decants" ? "10ml" : null),
+      volume:
+        item.selectedSize ||
+        item.volume ||
+        (item.category === "Decants" ? "10ml" : null),
     }));
 
     // تجهيز بيانات الطلب النهائية
@@ -370,36 +490,40 @@ const Checkout = () => {
                     <p className="text-primary/60">Aucun produit</p>
                   </div>
                 ) : (
-                  items.map((item) => (
-                    <div key={item._id} className="flex space-x-3">
-                      <img
-                        src={item.image}
-                        alt={item.title}
-                        className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg object-cover flex-shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-primary font-bold01 text-sm sm:text-base line-clamp-2">
-                          {item.title}
-                        </h4>
-                        <div className="flex justify-between items-center mt-1">
-                          <div>
-                            <span className="text-secondary font-p01 text-sm sm:text-base">
-                              {formatPrice(item.unitPrice || item.price)}
-                            </span>
-                            {/* Display volume in checkout */}
-                            {item.volume && (
-                              <span className="ml-2 bg-secondary/20 text-secondary px-2 py-0.5 rounded text-xs font-semibold">
-                                {item.volume}
+                  items.map((item) => {
+                    const itemPrice = getItemPrice(item);
+
+                    return (
+                      <div key={item._id} className="flex space-x-3">
+                        <img
+                          src={item.image}
+                          alt={item.title}
+                          className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg object-cover flex-shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-primary font-bold01 text-sm sm:text-base line-clamp-2">
+                            {item.title}
+                          </h4>
+                          <div className="flex justify-between items-center mt-1">
+                            <div>
+                              <span className="text-secondary font-p01 text-sm sm:text-base">
+                                {formatPrice(itemPrice)}
                               </span>
-                            )}
+                              {/* Display volume in checkout */}
+                              {(item.selectedSize || item.volume) && (
+                                <span className="ml-2 bg-secondary/20 text-secondary px-2 py-0.5 rounded text-xs font-semibold">
+                                  {item.selectedSize || item.volume}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-primary/60 text-xs sm:text-sm font-p01">
+                              x{item.quantity}
+                            </span>
                           </div>
-                          <span className="text-primary/60 text-xs sm:text-sm font-p01">
-                            x{item.quantity}
-                          </span>
                         </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
 
