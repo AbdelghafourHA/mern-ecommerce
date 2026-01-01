@@ -23,20 +23,20 @@ const __dirname = process.cwd();
 /* ===============================
    Trust Proxy (IMPORTANT for Render / Vercel / Nginx)
 ================================ */
-app.set("trust proxy", 1);
+// app.set("trust proxy", 1);
 
 /* ===============================
    Security Middlewares
 ================================ */
-app.use(helmet());
-app.disable("x-powered-by");
+// app.use(helmet());
+// app.disable("x-powered-by");
 
-app.use(
-  cors({
-    origin: process.env.FRONTEND_URL,
-    credentials: true,
-  })
-);
+// app.use(
+//   cors({
+//     origin: process.env.FRONTEND_URL,
+//     credentials: true,
+//   })
+// );
 
 /* ===============================
    Core Middlewares
