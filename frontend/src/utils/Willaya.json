@@ -8109,5 +8109,137 @@
         "nameAr": "حاسي الفحل"
       }
     ]
+  },
+  {
+    "wilayaCode": 59,
+    "nameFr": "Aflou",
+    "nameAr": "آفلو",
+    "communes": [
+      {
+        "id": 1,
+        "nameFr": "Aflou",
+        "nameAr": "آفلو"
+      }
+    ]
+  },
+  {
+    "wilayaCode": 60,
+    "nameFr": "Barika",
+    "nameAr": "بريكة",
+    "communes": [
+      {
+        "id": 1,
+        "nameFr": "Barika",
+        "nameAr": "بريكة"
+      }
+    ]
+  },
+  {
+    "wilayaCode": 61,
+    "nameFr": "El Kantara",
+    "nameAr": "القنطرة",
+    "communes": [
+      {
+        "id": 1,
+        "nameFr": "El Kantara",
+        "nameAr": "القنطرة"
+      }
+    ]
+  },
+  {
+    "wilayaCode": 62,
+    "nameFr": "Bir El Ater",
+    "nameAr": "بئر العاتر",
+    "communes": [
+      {
+        "id": 1,
+        "nameFr": "Bir El Ater",
+        "nameAr": "بئر العاتر"
+      }
+    ]
+  },
+  {
+    "wilayaCode": 63,
+    "nameFr": "El Aricha",
+    "nameAr": "العريشة",
+    "communes": [
+      {
+        "id": 1,
+        "nameFr": "El Aricha",
+        "nameAr": "العريشة"
+      }
+    ]
+  },
+  {
+    "wilayaCode": 64,
+    "nameFr": "Ksar Chellala",
+    "nameAr": "قصر الشلالة",
+    "communes": [
+      {
+        "id": 1,
+        "nameFr": "Ksar Chellala",
+        "nameAr": "قصر الشلالة"
+      }
+    ]
+  },
+  {
+    "wilayaCode": 65,
+    "nameFr": "Ain Oussera",
+    "nameAr": "عين وسارة",
+    "communes": [
+      {
+        "id": 1,
+        "nameFr": "Ain Oussera",
+        "nameAr": "عين وسارة"
+      }
+    ]
+  },
+  {
+    "wilayaCode": 66,
+    "nameFr": "Messad",
+    "nameAr": "مسعد",
+    "communes": [
+      {
+        "id": 1,
+        "nameFr": "Messad",
+        "nameAr": "مسعد"
+      }
+    ]
+  },
+  {
+    "wilayaCode": 67,
+    "nameFr": "Ksar El Boukhari",
+    "nameAr": "قصر البخاري",
+    "communes": [
+      {
+        "id": 1,
+        "nameFr": "Ksar El Boukhari",
+        "nameAr": "قصر البخاري"
+      }
+    ]
+  },
+  {
+    "wilayaCode": 68,
+    "nameFr": "Bou Saada",
+    "nameAr": "بوسعادة",
+    "communes": [
+      {
+        "id": 1,
+        "nameFr": "Bou Saada",
+        "nameAr": "بوسعادة"
+      }
+    ]
+  },
+  {
+    "wilayaCode": 69,
+    "nameFr": "Labiodh Sidi Cheikh",
+    "nameAr": "الأبيض سيدي الشيخ",
+    "communes": [
+      {
+        "id": 1,
+        "nameFr": "Labiodh Sidi Cheikh",
+        "nameAr": "الأبيض سيدي الشيخ"
+      }
+    ]
   }
 ]

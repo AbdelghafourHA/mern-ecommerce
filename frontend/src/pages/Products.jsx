@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Filter,
@@ -16,25 +16,34 @@ import { useCartStore } from "../stores/useCartStore";
 
 const Products = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [selectedCategories, setSelectedCategories] = useState([]);
-  const [selectedGenders, setSelectedGenders] = useState([]);
-  const [priceRange, setPriceRange] = useState([0, 100000]);
-  const [priceSort, setPriceSort] = useState("none");
-  const [currentPage, setCurrentPage] = useState(1);
-  const productsPerPage = 10;
 
-  const { products, getAllProducts, loading } = useProductStore();
+  const {
+    products,
+    getAllProducts,
+    loading,
+    counts,
+    pagination,
+    filters,
+    setFilter,
+    setPage,
+  } = useProductStore();
 
+  useEffect(() => {
+    setFilter("category", "all");
+    setPage(1);
+  }, []);
+
+  useEffect(() => {
+    setFilter("gender", "all");
+    setFilter("maxPrice", null);
+    setFilter("sort", "newest");
+    setPage(1);
+  }, []);
+
+  // جلب المنتجات عند تغيير الفلاتر أو الصفحة
   useEffect(() => {
     getAllProducts();
-  }, [getAllProducts]);
-
-  // إضافة useEffect لتفعيل "all" تلقائياً عندما تُحمّل المنتجات
-  useEffect(() => {
-    if (products.length > 0 && selectedCategories.length === 0) {
-      setSelectedCategories(["all"]);
-    }
-  }, [products, selectedCategories]);
+  }, [filters, pagination.currentPage, getAllProducts]);
 
   // دالة لحساب السعر النهائي
   const calculateFinalPrice = (product) => {
@@ -45,90 +54,50 @@ const Products = () => {
       : product.price;
   };
 
+  // الفئات من الـ store
   const categories = [
     {
       id: "all",
       name: "Tous les produits",
-      count: products.length,
+      count: pagination.globalTotalProducts || 0,
     },
-    {
-      id: "Parfums",
-      name: "Parfums",
-      count: products.filter((p) => p.category === "Parfums").length,
-    },
-    {
-      id: "Cosmétiques",
-      name: "Cosmétiques",
-      count: products.filter((p) => p.category === "Cosmétiques").length,
-    },
-    {
-      id: "Cadeaux",
-      name: "Cadeaux",
-      count: products.filter((p) => p.category === "Cadeaux").length,
-    },
+    ...(counts?.categories?.map((c) => ({
+      id: c._id,
+      name: c._id,
+      count: c.count,
+    })) || []),
   ];
 
+  // تصحيح حساب الـ genders مع دعم المصفوفة
   const genders = [
     {
-      id: "femme",
-      name: "Femme",
-      count: products.filter((p) => p.gender === "femme").length,
+      id: "all",
+      name: "Tous les genres",
+      count: pagination.globalTotalProducts || 0,
     },
     {
       id: "homme",
       name: "Homme",
-      count: products.filter((p) => p.gender === "homme").length,
+      count: counts?.genders?.find((g) => g._id === "homme")?.count || 0,
+    },
+    {
+      id: "femme",
+      name: "Femme",
+      count: counts?.genders?.find((g) => g._id === "femme")?.count || 0,
     },
   ];
 
-  // Price formatting
   const formatPrice = (price) => {
     return `${price.toLocaleString("fr-FR")} DA`;
   };
 
-  // Filtering products with gender filter and price sorting - UPDATED
-  const filteredProducts = useMemo(() => {
-    let filtered = products.filter((product) => {
-      const finalPrice = calculateFinalPrice(product);
-
-      const matchesCategory =
-        selectedCategories.length === 0 ||
-        selectedCategories.includes("all") ||
-        selectedCategories.includes(product.category);
-
-      const matchesGender =
-        selectedGenders.length === 0 ||
-        selectedGenders.includes(product.gender);
-
-      // استخدام السعر النهائي بدلاً من السعر الأصلي
-      const matchesPrice = finalPrice <= priceRange[1];
-
-      return matchesCategory && matchesGender && matchesPrice;
-    });
-
-    // Apply price sorting based on final price
-    if (priceSort === "asc") {
-      filtered.sort((a, b) => calculateFinalPrice(a) - calculateFinalPrice(b));
-    } else if (priceSort === "desc") {
-      filtered.sort((a, b) => calculateFinalPrice(b) - calculateFinalPrice(a));
-    } else {
-      // Default sort by newest (ID)
-      filtered.sort((a, b) => b.id - a.id);
-    }
-
-    return filtered;
-  }, [products, selectedCategories, selectedGenders, priceRange, priceSort]);
-
-  // Pagination logic
-  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
-  const startIndex = (currentPage - 1) * productsPerPage;
-  const endIndex = startIndex + productsPerPage;
-  const currentProducts = filteredProducts.slice(startIndex, endIndex);
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedCategories, selectedGenders, priceRange, priceSort]);
+  const resetFilters = () => {
+    setFilter("category", "all");
+    setFilter("gender", "all");
+    setFilter("maxPrice", null);
+    setFilter("sort", "newest");
+    setPage(1);
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -138,6 +107,16 @@ const Products = () => {
         staggerChildren: 0.1,
       },
     },
+  };
+
+  // معالجة تغيير الفئة
+  const handleCategoryChange = (categoryId) => {
+    if (categoryId === "all") {
+      setFilter("category", "all");
+    } else {
+      setFilter("category", categoryId);
+    }
+    setPage(1);
   };
 
   return (
@@ -180,17 +159,9 @@ const Products = () => {
               key={category.id}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                if (category.id === "all") {
-                  setSelectedCategories(["all"]);
-                } else {
-                  setSelectedCategories([category.id]);
-                }
-              }}
+              onClick={() => handleCategoryChange(category.id)}
               className={`cursor-pointer px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold transition-all duration-300 border flex items-center space-x-2 text-sm sm:text-base ${
-                (category.id === "all" && selectedCategories.includes("all")) ||
-                (category.id !== "all" &&
-                  selectedCategories.includes(category.id))
+                filters.category === category.id
                   ? "bg-secondary text-background border-transparent shadow-lg"
                   : "bg-background text-primary border-primary/20 hover:border-secondary"
               }`}
@@ -222,9 +193,9 @@ const Products = () => {
           >
             <Filter size={18} />
             <span>Filtres Avancés</span>
-            {(selectedGenders.length > 0 ||
-              priceRange[1] < 100000 ||
-              priceSort !== "none") && (
+            {(filters.gender !== "all" ||
+              filters.maxPrice !== null ||
+              (filters.sort && filters.sort !== "newest")) && (
               <span className="bg-secondary text-primary w-5 h-5 rounded-full text-xs flex items-center justify-center font-bold">
                 !
               </span>
@@ -240,18 +211,24 @@ const Products = () => {
             className="text-center mb-8"
           >
             <p className="text-primary/60 text-sm sm:text-base md:text-lg">
-              {filteredProducts.length} produit
-              {filteredProducts.length > 1 ? "s" : ""} trouvé
-              {filteredProducts.length > 1 ? "s" : ""}
-              {selectedCategories.length > 0 &&
-                !selectedCategories.includes("all") &&
-                ` • ${selectedCategories.join(", ")}`}
-              {selectedGenders.length > 0 && ` • ${selectedGenders.join(", ")}`}
-              {priceRange[1] < 100000 &&
-                ` • Jusqu'à ${formatPrice(priceRange[1])}`}
-              {priceSort !== "none" &&
+              {pagination.totalProducts} produit
+              {pagination.totalProducts > 1 ? "s" : ""} trouvé
+              {pagination.totalProducts > 1 ? "s" : ""}
+              {filters.category !== "all" && ` • ${filters.category}`}
+              {filters.gender !== "all" &&
+                ` • ${
+                  filters.gender === "femme"
+                    ? "Femme"
+                    : filters.gender === "homme"
+                    ? "Homme"
+                    : filters.gender
+                }`}
+              {filters.maxPrice &&
+                ` • Jusqu'à ${formatPrice(filters.maxPrice)}`}
+              {(filters.sort === "price_asc" ||
+                filters.sort === "price_desc") &&
                 ` • Tri par prix ${
-                  priceSort === "asc" ? "croissant" : "décroissant"
+                  filters.sort === "price_asc" ? "croissant" : "décroissant"
                 }`}
             </p>
           </motion.div>
@@ -278,17 +255,11 @@ const Products = () => {
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              key={
-                selectedCategories.join(",") +
-                selectedGenders.join(",") +
-                priceSort +
-                priceRange[1] +
-                currentPage
-              }
+              key={JSON.stringify(filters) + pagination.currentPage}
               className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"
             >
               <AnimatePresence mode="wait">
-                {currentProducts.map((product) => (
+                {products.map((product) => (
                   <ProductCard
                     key={product._id}
                     product={product}
@@ -300,7 +271,7 @@ const Products = () => {
             </motion.div>
 
             {/* Pagination - Only show if more than 10 products */}
-            {filteredProducts.length > productsPerPage && (
+            {pagination.totalPages > 1 && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -310,11 +281,11 @@ const Products = () => {
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() =>
-                    setCurrentPage((prev) => Math.max(1, prev - 1))
+                    setPage(Math.max(1, pagination.currentPage - 1))
                   }
-                  disabled={currentPage === 1}
+                  disabled={pagination.currentPage === 1}
                   className={`p-2 rounded-full ${
-                    currentPage === 1
+                    pagination.currentPage === 1
                       ? "text-primary/30 cursor-not-allowed"
                       : "text-primary hover:bg-primary/10 cursor-pointer"
                   }`}
@@ -323,45 +294,56 @@ const Products = () => {
                 </motion.button>
 
                 <div className="flex items-center space-x-2">
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    let pageNumber;
-                    if (totalPages <= 5) {
-                      pageNumber = i + 1;
-                    } else if (currentPage <= 3) {
-                      pageNumber = i + 1;
-                    } else if (currentPage >= totalPages - 2) {
-                      pageNumber = totalPages - 4 + i;
-                    } else {
-                      pageNumber = currentPage - 2 + i;
-                    }
+                  {Array.from(
+                    { length: Math.min(5, pagination.totalPages) },
+                    (_, i) => {
+                      let pageNumber;
+                      if (pagination.totalPages <= 5) {
+                        pageNumber = i + 1;
+                      } else if (pagination.currentPage <= 3) {
+                        pageNumber = i + 1;
+                      } else if (
+                        pagination.currentPage >=
+                        pagination.totalPages - 2
+                      ) {
+                        pageNumber = pagination.totalPages - 4 + i;
+                      } else {
+                        pageNumber = pagination.currentPage - 2 + i;
+                      }
 
-                    return pageNumber <= totalPages ? (
-                      <motion.button
-                        key={pageNumber}
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => setCurrentPage(pageNumber)}
-                        className={`w-10 h-10 rounded-full font-semibold transition-all duration-300 ${
-                          currentPage === pageNumber
-                            ? "bg-secondary text-background"
-                            : "text-primary hover:bg-primary/10"
-                        }`}
-                      >
-                        {pageNumber}
-                      </motion.button>
-                    ) : null;
-                  })}
+                      return pageNumber <= pagination.totalPages ? (
+                        <motion.button
+                          key={pageNumber}
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => setPage(pageNumber)}
+                          className={`w-10 h-10 rounded-full font-semibold transition-all duration-300 ${
+                            pagination.currentPage === pageNumber
+                              ? "bg-secondary text-background"
+                              : "text-primary hover:bg-primary/10"
+                          }`}
+                        >
+                          {pageNumber}
+                        </motion.button>
+                      ) : null;
+                    }
+                  )}
                 </div>
 
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() =>
-                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                    setPage(
+                      Math.min(
+                        pagination.totalPages,
+                        pagination.currentPage + 1
+                      )
+                    )
                   }
-                  disabled={currentPage === totalPages}
+                  disabled={pagination.currentPage === pagination.totalPages}
                   className={`p-2 rounded-full ${
-                    currentPage === totalPages
+                    pagination.currentPage === pagination.totalPages
                       ? "text-primary/30 cursor-not-allowed"
                       : "text-primary hover:bg-primary/10 cursor-pointer"
                   }`}
@@ -370,7 +352,7 @@ const Products = () => {
                 </motion.button>
 
                 <span className="text-primary/60 text-sm ml-4">
-                  Page {currentPage} sur {totalPages}
+                  Page {pagination.currentPage} sur {pagination.totalPages}
                 </span>
               </motion.div>
             )}
@@ -378,7 +360,7 @@ const Products = () => {
         )}
 
         {/* Empty State - Only show when not loading and no products */}
-        {!loading && filteredProducts.length === 0 && (
+        {!loading && products.length === 0 && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -394,12 +376,7 @@ const Products = () => {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                setSelectedCategories(["all"]);
-                setSelectedGenders([]);
-                setPriceRange([0, 100000]);
-                setPriceSort("none");
-              }}
+              onClick={resetFilters}
               className="bg-accent text-primary px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 text-sm sm:text-base"
             >
               Réinitialiser les filtres
@@ -413,12 +390,6 @@ const Products = () => {
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
         genders={genders}
-        selectedGenders={selectedGenders}
-        setSelectedGenders={setSelectedGenders}
-        priceRange={priceRange}
-        setPriceRange={setPriceRange}
-        priceSort={priceSort}
-        setPriceSort={setPriceSort}
         formatPrice={formatPrice}
       />
       <Footer colorBg={"primary"} colorText={"background"} />
@@ -432,6 +403,30 @@ const ProductCard = ({ product, formatPrice, calculateFinalPrice }) => {
 
   const finalPrice = calculateFinalPrice(product);
   const hasDiscount = product.discount > 0;
+
+  // Function to handle adding decant to cart with default volume
+  const handleAddToCart = () => {
+    if (product.category === "Decants") {
+      // Get default volume from product data
+      const defaultVolume = product.defaultVolume || "10ml";
+
+      // Create a new object with the decant data plus volume information
+      const decantWithVolume = {
+        ...product,
+        volume: defaultVolume, // Use default volume from product
+        // If volume pricing exists, use the price for the default volume
+        price: product.volumePricing?.[defaultVolume] || finalPrice,
+      };
+      addToCart(decantWithVolume);
+    } else {
+      // For non-decant products, add normally
+      addToCart(product);
+    }
+  };
+
+  // Get available sizes for decants
+  const availableSizes = product.availableSizes || ["10ml", "20ml", "30ml"];
+  const defaultVolume = product.defaultVolume || "10ml";
 
   return (
     <motion.div
@@ -455,7 +450,13 @@ const ProductCard = ({ product, formatPrice, calculateFinalPrice }) => {
             {product.category}
           </div>
           <div className="absolute top-2 left-2 bg-accent text-primary px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold capitalize">
-            {product.gender}
+            {Array.isArray(product.gender) && product.gender.length > 1
+              ? "Unisexe"
+              : Array.isArray(product.gender) && product.gender.length === 1
+              ? product.gender[0]
+              : Array.isArray(product.gender)
+              ? product.gender.join(", ")
+              : product.gender}
           </div>
 
           {/* Discount Badge - Responsive size */}
@@ -490,18 +491,34 @@ const ProductCard = ({ product, formatPrice, calculateFinalPrice }) => {
               </span>
             )}
           </div>
+          {/* Volume display for Decants */}
+          {product.category === "Decants" && (
+            <div className="mt-2">
+              <span className="inline-block bg-secondary/20 text-secondary text-xs px-2 py-1 rounded-full font-semibold">
+                {defaultVolume} (Par défaut)
+              </span>
+              <p className="text-xs text-primary/60 mt-1">
+                Tailles disponibles: {availableSizes.join(", ")}
+              </p>
+              <p className="text-xs text-primary/60 mt-1">
+                Cliquez pour choisir d'autres volumes et prix
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Add to Cart Button - Responsive text and padding */}
         <motion.button
-          onClick={() => addToCart(product)}
+          onClick={handleAddToCart}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           className="w-full bg-primary text-background py-2 px-2 sm:px-3 rounded-xl font-semibold hover:bg-primary/90 transition-all duration-300 flex items-center justify-center space-x-1 sm:space-x-2 mt-auto"
         >
           <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4" />
           <span className="truncate text-sm md:text-base lg:text-lg">
-            Ajouter
+            {product.category === "Decants"
+              ? `Ajouter (${defaultVolume})`
+              : "Ajouter"}
           </span>
         </motion.button>
       </div>
@@ -509,19 +526,46 @@ const ProductCard = ({ product, formatPrice, calculateFinalPrice }) => {
   );
 };
 
-// Enhanced Filter Sidebar with Gender, Price, and Sort filters
-const FilterSidebar = ({
-  isOpen,
-  onClose,
-  genders,
-  selectedGenders,
-  setSelectedGenders,
-  priceRange,
-  setPriceRange,
-  priceSort,
-  setPriceSort,
-  formatPrice,
-}) => {
+// Enhanced Filter Sidebar مع ربط بالـ Store
+const FilterSidebar = ({ isOpen, onClose, genders, formatPrice }) => {
+  const { filters, setFilter, setPage } = useProductStore();
+
+  const getCurrentPriceSort = () => {
+    if (!filters.sort || filters.sort === "newest") return "none";
+    if (filters.sort === "price_asc") return "asc";
+    if (filters.sort === "price_desc") return "desc";
+    return "none";
+  };
+
+  const handleGenderChange = (genderId) => {
+    if (filters.gender === genderId) {
+      setFilter("gender", "all");
+    } else {
+      setFilter("gender", genderId);
+    }
+    setPage(1);
+  };
+  const handlePriceRangeChange = (value) => {
+    setFilter("maxPrice", parseInt(value));
+    setPage(1);
+  };
+
+  const handlePriceSortChange = (sortType) => {
+    if (sortType === "none") {
+      setFilter("sort", "newest");
+    } else {
+      setFilter("sort", sortType === "asc" ? "price_asc" : "price_desc");
+    }
+    setPage(1);
+  };
+
+  const resetFilters = () => {
+    setFilter("gender", "all");
+    setFilter("maxPrice", null);
+    setFilter("sort", "newest");
+    setPage(1);
+  };
+
   return (
     <AnimatePresence mode="sync">
       {isOpen && (
@@ -565,9 +609,9 @@ const FilterSidebar = ({
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => setPriceSort("none")}
+                    onClick={() => handlePriceSortChange("none")}
                     className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all duration-300 text-sm sm:text-base ${
-                      priceSort === "none"
+                      getCurrentPriceSort() === "none"
                         ? "bg-secondary text-background border-secondary shadow-lg"
                         : "bg-primary/5 border-primary/10 hover:border-secondary"
                     }`}
@@ -578,9 +622,9 @@ const FilterSidebar = ({
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => setPriceSort("asc")}
+                    onClick={() => handlePriceSortChange("asc")}
                     className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all duration-300 text-sm sm:text-base ${
-                      priceSort === "asc"
+                      getCurrentPriceSort() === "asc"
                         ? "bg-secondary text-background border-secondary shadow-lg"
                         : "bg-primary/5 border-primary/10 hover:border-secondary"
                     }`}
@@ -592,9 +636,9 @@ const FilterSidebar = ({
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => setPriceSort("desc")}
+                    onClick={() => handlePriceSortChange("desc")}
                     className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all duration-300 text-sm sm:text-base ${
-                      priceSort === "desc"
+                      getCurrentPriceSort() === "desc"
                         ? "bg-secondary text-background border-secondary shadow-lg"
                         : "bg-primary/5 border-primary/10 hover:border-secondary"
                     }`}
@@ -619,16 +663,8 @@ const FilterSidebar = ({
                     >
                       <input
                         type="checkbox"
-                        checked={selectedGenders.includes(gender.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedGenders([...selectedGenders, gender.id]);
-                          } else {
-                            setSelectedGenders(
-                              selectedGenders.filter((id) => id !== gender.id)
-                            );
-                          }
-                        }}
+                        checked={filters.gender === gender.id}
+                        onChange={() => handleGenderChange(gender.id)}
                         className="rounded text-secondary border-primary/20 focus:ring-secondary"
                       />
                       <span className="ml-3 text-primary font-semibold capitalize">
@@ -645,7 +681,7 @@ const FilterSidebar = ({
               {/* Price Filter */}
               <div className="mb-6 sm:mb-8">
                 <h3 className="text-base sm:text-lg font-bold text-primary mb-3 sm:mb-4">
-                  Prix maximum: {formatPrice(priceRange[1])}
+                  Prix maximum: {formatPrice(filters.maxPrice || 100000)}
                 </h3>
                 <div className="space-y-4">
                   <input
@@ -653,10 +689,8 @@ const FilterSidebar = ({
                     min="0"
                     max="100000"
                     step="1000"
-                    value={priceRange[1]}
-                    onChange={(e) =>
-                      setPriceRange([0, parseInt(e.target.value)])
-                    }
+                    value={filters.maxPrice || 100000}
+                    onChange={(e) => handlePriceRangeChange(e.target.value)}
                     className="w-full accent-secondary"
                   />
                   <div className="flex justify-between text-primary/80 text-sm sm:text-base">
@@ -683,11 +717,7 @@ const FilterSidebar = ({
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => {
-                    setSelectedGenders([]);
-                    setPriceRange([0, 100000]);
-                    setPriceSort("none");
-                  }}
+                  onClick={resetFilters}
                   className="w-full border border-primary/20 text-primary py-2 sm:py-3 rounded-xl font-semibold hover:border-secondary hover:text-secondary transition-all duration-300 text-sm sm:text-base"
                 >
                   Réinitialiser les filtres

@@ -6,8 +6,74 @@ export const useProductStore = create((set, get) => ({
   products: [],
   product: null,
   loading: false,
+  allProducts: [],
+
+  counts: {
+    categories: [],
+    gender: "all",
+  },
+  pagination: {
+    currentPage: 1,
+    totalPages: 1,
+    totalProducts: 0,
+    limit: 12,
+  },
+
+  /* --------------------
+     FILTERS (GLOBAL)
+  ---------------------*/
+  filters: {
+    category: "all",
+    gender: "all",
+    maxPrice: null,
+    sort: "newest",
+    search: "",
+  },
+
+  /* --------------------
+     ACTIONS
+  ---------------------*/
+  setFilter: (key, value) => {
+    set((state) => ({
+      filters: { ...state.filters, [key]: value },
+      pagination: { ...state.pagination, currentPage: 1 },
+    }));
+  },
+
+  setPage: (page) => {
+    set((state) => ({
+      pagination: { ...state.pagination, currentPage: page },
+    }));
+  },
+
+  resetFilters: () => {
+    set({
+      filters: {
+        category: "all",
+        gender: "all",
+        maxPrice: null,
+        sort: "newest",
+        search: "",
+      },
+      pagination: {
+        currentPage: 1,
+        totalPages: 1,
+        totalProducts: 0,
+        limit: 12,
+      },
+    });
+  },
+
+  /* --------------------
+     FETCH PRODUCTS
+  ---------------------*/
 
   setProducts: (products) => set({ products }),
+
+  getAllProductsForAnalytics: async () => {
+    const res = await api.get("/products?limit=10000");
+    set({ allProducts: res.data.products });
+  },
 
   createProduct: async (productData) => {
     set({ loading: true });
@@ -26,54 +92,111 @@ export const useProductStore = create((set, get) => ({
   },
 
   getAllProducts: async () => {
+    const { filters, pagination } = get();
+
     set({ loading: true });
+
     try {
-      const res = await api.get("/products");
-      set({ products: res.data, loading: false });
+      const res = await api.get("/products", {
+        params: {
+          page: pagination.currentPage,
+          limit: pagination.limit,
+          search: filters.search || undefined,
+          category:
+            filters.category && filters.category !== "all"
+              ? filters.category
+              : undefined,
+          gender: filters.gender !== "all" ? filters.gender : undefined,
+          maxPrice: filters.maxPrice || undefined,
+          sort: filters.sort !== "newest" ? filters.sort : undefined,
+        },
+      });
+
+      set({
+        products: res.data.products,
+        counts: res.data.counts,
+        pagination: {
+          ...pagination,
+          ...res.data.pagination,
+        },
+        loading: false,
+      });
     } catch (error) {
-      console.log("error is useProductStore getAllProducts", error);
-      toast.error(error.response.data.error || "Failed to fetch products");
+      console.error("error in getProducts store", error);
+      toast.error("Failed to fetch products");
+      set({ loading: false });
+    }
+  },
+
+  getProductsByCategory: async (category) => {
+    const { filters, pagination } = get();
+    set({ loading: true });
+
+    try {
+      const res = await api.get(`/products/category/${category}`, {
+        params: {
+          page: pagination.currentPage,
+          limit: pagination.limit,
+          gender: filters.gender !== "all" ? filters.gender : undefined,
+          maxPrice: filters.maxPrice || undefined,
+          sort: filters.sort !== "newest" ? filters.sort : undefined,
+        },
+      });
+
+      set({
+        products: res.data.products,
+        counts: res.data.counts,
+        pagination: {
+          ...pagination,
+          ...res.data.pagination,
+        },
+        loading: false,
+      });
+    } catch (error) {
+      console.error("getProductsByCategory store error", error);
       set({ loading: false });
     }
   },
 
   deleteProduct: async (productId) => {
-    set({ loading: true });
+    const previousProducts = get().products;
+
+    set({
+      products: previousProducts.filter((product) => product._id !== productId),
+    });
+
     try {
       await api.delete(`/products/${productId}`);
-      set((prevState) => ({
-        products: prevState.products.filter(
-          (product) => product._id !== productId
-        ),
-        loading: false,
-      }));
-      toast.success("Product deleted successfully");
+      toast.success("Produit supprimé avec succès");
     } catch (error) {
-      console.log("error is useProductStore deleteProduct", error);
-      toast.error(error.response.data.error || "Failed to delete product");
-      set({ loading: false });
+      set({ products: previousProducts });
+
+      toast.error(error.response?.data?.error || "Failed to delete product");
     }
   },
 
   toggleFeatured: async (productId) => {
-    set({ loading: true });
+    set((state) => ({
+      products: state.products.map((product) =>
+        product._id === productId
+          ? { ...product, isFeatured: !product.isFeatured }
+          : product
+      ),
+    }));
 
     try {
       await api.patch(`/products/${productId}`);
-      set((prevState) => ({
-        products: prevState.products.map((product) => {
-          if (product._id === productId) {
-            return { ...product, isFeatured: !product.isFeatured };
-          }
-          return product;
-        }),
-        loading: false,
-      }));
       toast.success("Le produit a été mis à jour avec succès");
     } catch (error) {
-      console.log("error is useProductStore toggleFeatured", error);
-      toast.error(error.response.data.error || "Failed to update product");
-      set({ loading: false });
+      set((state) => ({
+        products: state.products.map((product) =>
+          product._id === productId
+            ? { ...product, isFeatured: !product.isFeatured }
+            : product
+        ),
+      }));
+
+      toast.error(error.response?.data?.error || "Failed to update product");
     }
   },
 
@@ -112,18 +235,6 @@ export const useProductStore = create((set, get) => ({
     }
   },
 
-  getProductByCategory: async (category) => {
-    set({ loading: true });
-    try {
-      const res = await api.get(`/products/category/${category}`);
-      set({ products: res.data, loading: false });
-    } catch (error) {
-      console.log("error is useProductStore getProductByCategory", error);
-      toast.error(error.response.data.error || "Failed to fetch products");
-      set({ loading: false });
-    }
-  },
-
   getProductById: async (productId) => {
     set({ loading: true, product: null });
     try {
@@ -136,7 +247,6 @@ export const useProductStore = create((set, get) => ({
     }
   },
 
-  // دالة لتحديث التخفيض فقط
   productDiscount: async (productId, discount) => {
     try {
       const response = await api.put(`/products/${productId}/discount`, {
@@ -145,7 +255,6 @@ export const useProductStore = create((set, get) => ({
 
       const updatedProduct = response.data;
 
-      // تحديث state بإضافة المنتج المحدث
       set((state) => ({
         products: state.products.map((product) =>
           product._id === updatedProduct._id ? updatedProduct : product
@@ -161,7 +270,6 @@ export const useProductStore = create((set, get) => ({
     }
   },
 
-  // دالة لتحديث السعر والتخفيض معاً
   updateProductPricing: async (productId, price, discount) => {
     try {
       const response = await api.put(`/products/${productId}/pricing`, {
@@ -186,13 +294,11 @@ export const useProductStore = create((set, get) => ({
     }
   },
 
-  // دالة لحساب السعر بعد التخفيض (للاستخدام في الواجهة)
   calculateDiscountedPrice: (price, discount) => {
     if (!discount || discount <= 0) return price;
     return Math.round(price * (1 - discount / 100));
   },
 
-  // تطبيق التخفيض على جميع المنتجات
   applyDiscountToAll: async (discount, categories = []) => {
     try {
       const response = await api.put("/products/discount/all", {
@@ -202,7 +308,6 @@ export const useProductStore = create((set, get) => ({
 
       const result = response.data;
 
-      // تحديث state بالمنتجات المحدثة
       set((state) => ({
         products: state.products.map((product) => {
           const updatedProduct = result.products.find(
@@ -212,11 +317,9 @@ export const useProductStore = create((set, get) => ({
         }),
       }));
 
-      // toast.success(`Discount de ${discount}% appliqué avec succès!`);
       return result;
     } catch (error) {
       console.error("Error applying discount to all products:", error);
-      // toast.error("Erreur lors de l'application du discount");
       throw error;
     }
   },
@@ -229,7 +332,6 @@ export const useProductStore = create((set, get) => ({
 
       const result = response.data;
 
-      // تحديث state بالمنتجات المحدثة
       set((state) => ({
         products: state.products.map((product) => {
           const updatedProduct = result.products.find(
@@ -239,11 +341,9 @@ export const useProductStore = create((set, get) => ({
         }),
       }));
 
-      // toast.success("Tous les discounts ont été supprimés avec succès!");
       return result;
     } catch (error) {
       console.error("Error removing discount from all products:", error);
-      // toast.error("Erreur lors de la suppression des discounts");
       throw error;
     }
   },

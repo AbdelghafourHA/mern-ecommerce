@@ -3,35 +3,205 @@ import cloudinary from "../config/cloudinary.js";
 
 export const getAllProducts = async (req, res) => {
   try {
-    const products = await Product.find({});
-    if (!products) {
-      return res.status(404).json({ message: "No products found" });
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 12;
+    const skip = (page - 1) * limit;
+
+    const { category, gender, maxPrice, sort } = req.query;
+
+    /* -------------------------
+    1️⃣ BUILD GLOBAL QUERY
+    --------------------------*/
+    const query = {};
+    const countQuery = {};
+
+    const { search } = req.query;
+
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { category: { $regex: search, $options: "i" } },
+      ];
     }
-    res.json(products);
+
+    if (category && category !== "all") {
+      query.category = category;
+    }
+    // تصحيح فلترة الجندر للمصفوفة
+    if (gender && gender !== "all") {
+      query.gender = { $in: [gender] }; // استخدام $in للبحث في المصفوفة
+    }
+
+    // Price filter (price OR newPrice)
+    if (maxPrice) {
+      query.$or = [
+        { newPrice: { $lte: Number(maxPrice) } },
+        { price: { $lte: Number(maxPrice) } },
+      ];
+    }
+
+    /* -------------------------
+       2️⃣ SORTING
+    --------------------------*/
+    let sortQuery = { createdAt: -1 }; // newest default
+
+    if (sort === "price_asc") {
+      sortQuery = { newPrice: 1, price: 1 };
+    } else if (sort === "price_desc") {
+      sortQuery = { newPrice: -1, price: -1 };
+    }
+
+    /* -------------------------
+       3️⃣ TOTAL PRODUCTS (GLOBAL)
+    --------------------------*/
+    const globalTotalProducts = await Product.countDocuments({});
+
+    const totalProducts = await Product.countDocuments(query);
+
+    /* -------------------------
+       4️⃣ PAGINATED PRODUCTS
+    --------------------------*/
+    const products = await Product.find(query)
+      .sort(sortQuery)
+      .skip(skip)
+      .limit(limit);
+
+    /* -------------------------
+       5️⃣ GLOBAL COUNTS (NOT PAGE)
+    --------------------------*/
+
+    const categoryCounts = await Product.aggregate([
+      { $match: countQuery },
+      {
+        $group: {
+          _id: "$category",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // تصحيح حساب الـ genderCounts للمصفوفة
+    const genderCounts = await Product.aggregate([
+      { $match: countQuery },
+      { $unwind: "$gender" }, // تفكيك المصفوفة أولاً
+      {
+        $group: {
+          _id: "$gender",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    /* -------------------------
+       6️⃣ RESPONSE
+    --------------------------*/
+    res.json({
+      products,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalProducts / limit),
+        totalProducts,
+        globalTotalProducts,
+        limit,
+      },
+      counts: {
+        categories: categoryCounts,
+        genders: genderCounts,
+      },
+    });
   } catch (error) {
-    console.log("error in getAllProducts controller", error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error("error in getAllProducts controller", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
+export const getProductsByCategory = async (req, res) => {
+  try {
+    const category = req.params.category;
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 12;
+    const skip = (page - 1) * limit;
+
+    const { gender, maxPrice, sort } = req.query;
+
+    /* -------------------------
+       1️⃣ BASE QUERY (CATEGORY FIXED)
+    --------------------------*/
+    const query = { category };
+    const countQuery = { category };
+
+    // تصحيح فلترة الجندر للمصفوفة
+    if (gender && gender !== "all") {
+      query.gender = { $in: [gender] }; // استخدام $in للبحث في المصفوفة
+    }
+
+    if (maxPrice) {
+      query.$or = [
+        { newPrice: { $lte: Number(maxPrice) } },
+        { price: { $lte: Number(maxPrice) } },
+      ];
+      countQuery.$or = query.$or;
+    }
+
+    /* -------------------------
+       2️⃣ SORT
+    --------------------------*/
+    let sortQuery = { createdAt: -1 };
+    if (sort === "price_asc") sortQuery = { newPrice: 1, price: 1 };
+    if (sort === "price_desc") sortQuery = { newPrice: -1, price: -1 };
+
+    /* -------------------------
+       3️⃣ COUNTS
+    --------------------------*/
+    const totalProducts = await Product.countDocuments(query);
+    const globalTotalProducts = await Product.countDocuments(countQuery);
+
+    // تصحيح حساب الـ genderCounts للمصفوفة
+    const genderCounts = await Product.aggregate([
+      { $match: { category } },
+      { $unwind: "$gender" }, // تفكيك المصفوفة أولاً
+      {
+        $group: {
+          _id: "$gender",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    /* -------------------------
+       4️⃣ PAGINATED DATA
+    --------------------------*/
+    const products = await Product.find(query)
+      .sort(sortQuery)
+      .skip(skip)
+      .limit(limit);
+
+    /* -------------------------
+       5️⃣ RESPONSE
+    --------------------------*/
+    res.json({
+      products,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalProducts / limit),
+        totalProducts,
+        globalTotalProducts,
+        limit,
+      },
+      counts: {
+        genders: genderCounts,
+      },
+    });
+  } catch (error) {
+    console.error("getProductsByCategory error", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
 export const getFeaturedProducts = async (req, res) => {
   try {
     const products = await Product.find({ isFeatured: true });
     if (!products) {
       return res.status(404).json({ message: "No featured products found" });
-    }
-    res.json(products);
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
-
-export const getProductsByCategory = async (req, res) => {
-  const { category } = req.params;
-  try {
-    const products = await Product.find({ category: category });
-    if (!products) {
-      return res.status(404).json({ message: "No products found" });
     }
     res.json(products);
   } catch (error) {

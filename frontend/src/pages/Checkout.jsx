@@ -10,6 +10,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import algeriaWillayas from "../utils/Willaya.json";
 import { useCheckoutStore } from "../stores/useCheckoutStore";
+import { useShippingStore } from "../stores/useShippingStore"; // إضافة الـ store الجديد
 
 const Checkout = () => {
   const [items, setItems] = useState([]);
@@ -18,42 +19,49 @@ const Checkout = () => {
   const [isDirectCheckout, setIsDirectCheckout] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
 
+  // إضافة state جديد لحساب سعر الشحن
+  const [shippingPrice, setShippingPrice] = useState(0);
+  const [selectedWilaya, setSelectedWilaya] = useState(null);
+
+  const navigate = useNavigate();
+  const [currentStep, setCurrentStep] = useState(1);
+  const { createCheckout } = useCheckoutStore();
+  const {
+    shipping,
+    fetchShipping,
+    loading: shippingLoading,
+  } = useShippingStore(); // جلب بيانات الشحن
+
   useEffect(() => {
-    // Check if we have a direct checkout in localStorage FIRST
+    fetchShipping(); // جلب بيانات الشحن عند تحميل المكون
+  }, []);
+
+  useEffect(() => {
     const directCheckoutData = JSON.parse(
       localStorage.getItem("directCheckout") || "null"
     );
 
     if (directCheckoutData && directCheckoutData.directCheckout) {
-      // Use direct checkout data
-      console.log("Direct checkout detected:", directCheckoutData);
       setIsDirectCheckout(true);
       setItems([directCheckoutData.product]);
       setCheckoutTotal(directCheckoutData.total);
       setItemCount(directCheckoutData.count);
 
-      // Clear direct checkout data after reading
       setTimeout(() => {
         localStorage.removeItem("directCheckout");
       }, 100);
     } else {
-      // Normal checkout from cart
       const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-      console.log("Normal cart checkout:", cart);
       setIsDirectCheckout(false);
       setItems(cart);
 
-      // Calculate totals with proper discount handling for decants
       const newTotal = cart.reduce((sum, item) => {
-        // For decants, use the correct price based on volume and discount
         if (item.category === "Decants") {
-          // Check if we have a discounted price for the selected volume
           if (
             item.discount > 0 &&
             item.discountedVolumePricing &&
             item.selectedSize
           ) {
-            // Try to get discounted price from discountedVolumePricing
             let discountedVolumePricing = {};
             if (
               item.discountedVolumePricing instanceof Map ||
@@ -76,7 +84,6 @@ const Checkout = () => {
             }
           }
 
-          // Fallback: use volume price and apply discount manually
           let volumePricing = {};
           if (
             item.volumePricing instanceof Map ||
@@ -99,7 +106,6 @@ const Checkout = () => {
           return sum + finalPrice * item.quantity;
         }
 
-        // For regular products
         const price =
           item.discount > 0
             ? item.newPrice > 0
@@ -118,61 +124,45 @@ const Checkout = () => {
     setHasLoaded(true);
   }, []);
 
-  const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState(1);
-
-  // استخدام البيانات من ملف JSON
   const algeriaWilayas = {};
   algeriaWillayas.forEach((wilaya) => {
     const wilayaKey = `${wilaya.wilayaCode.toString().padStart(2, "0")}-${
       wilaya.nameFr
     }`;
-    algeriaWilayas[wilayaKey] = wilaya.communes.map(
-      (commune) => commune.nameFr
-    );
+    algeriaWilayas[wilayaKey] = {
+      name: wilaya.nameFr,
+      code: wilaya.wilayaCode,
+      communes: wilaya.communes.map((commune) => commune.nameFr),
+    };
   });
 
-  const { createCheckout } = useCheckoutStore();
-
-  // Calculate subtotal based on current items
   const subtotal = checkoutTotal;
-  const shipping = 1000;
-  const total = subtotal + shipping;
+  const total = subtotal + shippingPrice;
 
-  // تهيئة formData مع بيانات الطلب
   const [formData, setFormData] = useState({
-    // Personal Information
     firstName: "",
     lastName: "",
     email: "",
     phone: "",
-
-    // Shipping Address
     address: "",
     willaya: "",
     commune: "",
     country: "Algérie",
-    deliveryType: "home", // home or office
-
-    // Payment Method
+    deliveryType: "home",
     paymentMethod: "COD",
   });
 
   const formatPrice = (price) => {
-    return `${price.toLocaleString("fr-FR")} DA`;
+    return `${price?.toLocaleString("fr-FR") || 0} DA`;
   };
 
-  // Function to get the correct price for an item
   const getItemPrice = (item) => {
-    // For decants
     if (item.category === "Decants") {
-      // Check if we have a discounted price for the selected volume
       if (
         item.discount > 0 &&
         item.discountedVolumePricing &&
         item.selectedSize
       ) {
-        // Try to get discounted price from discountedVolumePricing
         let discountedVolumePricing = {};
         if (
           item.discountedVolumePricing instanceof Map ||
@@ -195,7 +185,6 @@ const Checkout = () => {
         }
       }
 
-      // Fallback: use volume price and apply discount
       let volumePricing = {};
       if (
         item.volumePricing instanceof Map ||
@@ -216,7 +205,6 @@ const Checkout = () => {
         : volumePrice;
     }
 
-    // For regular products
     return item.discount > 0
       ? item.newPrice > 0
         ? item.newPrice
@@ -226,19 +214,59 @@ const Checkout = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-      // Reset commune when willaya changes
-      ...(name === "willaya" && { commune: "" }),
-    }));
+
+    setFormData((prev) => {
+      const newFormData = {
+        ...prev,
+        [name]: value,
+        ...(name === "willaya" && { commune: "" }),
+      };
+
+      // إذا تغيرت الولاية، احسب سعر الشحن الجديد
+      if (name === "willaya") {
+        calculateShippingPrice(newFormData.willaya, newFormData.deliveryType);
+      }
+
+      // إذا تغير نوع التوصيل، احسب سعر الشحن الجديد
+      if (name === "deliveryType" && formData.willaya) {
+        calculateShippingPrice(formData.willaya, value);
+      }
+
+      return newFormData;
+    });
+  };
+
+  // دالة لحساب سعر الشحن بناءً على الولاية ونوع التوصيل
+  const calculateShippingPrice = (wilayaValue, deliveryType) => {
+    if (!wilayaValue) {
+      setShippingPrice(0);
+      setSelectedWilaya(null);
+      return;
+    }
+
+    // استخراج كود الولاية من القيمة (مثلاً: "01-Adrar")
+    const wilayaCode = parseInt(wilayaValue.split("-")[0]);
+
+    // البحث عن الولاية في بيانات الشحن
+    const wilayaData = shipping.find((s) => s.wilayaCode === wilayaCode);
+
+    if (wilayaData && wilayaData.isActive) {
+      setSelectedWilaya(wilayaData);
+
+      // تحديد السعر بناءً على نوع التوصيل
+      const price =
+        deliveryType === "home" ? wilayaData.homePrice : wilayaData.officePrice;
+
+      setShippingPrice(price);
+    } else {
+      setSelectedWilaya(null);
+      setShippingPrice(0);
+    }
   };
 
   const handlePhoneChange = (e) => {
-    let value = e.target.value.replace(/\D/g, ""); // Remove non-digits
-    // Remove +213 if user tries to type it
+    let value = e.target.value.replace(/\D/g, "");
     value = value.replace(/^213/, "");
-    // Limit to 9 digits after country code
     if (value.length > 9) {
       value = value.slice(0, 9);
     }
@@ -259,35 +287,48 @@ const Checkout = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Prepare order items based on checkout type
+    // التحقق من أن الولاية مفعلة للشحن
+    if (selectedWilaya && !selectedWilaya.isActive) {
+      alert(
+        "La livraison n'est pas disponible pour cette wilaya pour le moment."
+      );
+      return;
+    }
+
+    // التحقق من وجود سعر للشحن
+    if (shippingPrice === 0 && formData.willaya) {
+      alert("Veuillez sélectionner une wilaya valide pour la livraison.");
+      return;
+    }
+
     const orderItems = items.map((item) => ({
       name: item.title,
       quantity: item.quantity,
       image: item.image,
-      price: getItemPrice(item), // Use the correct price calculation
+      price: getItemPrice(item),
       product: item._id,
-      // ADD VOLUME TO ORDER ITEMS
       volume:
         item.selectedSize ||
         item.volume ||
         (item.category === "Decants" ? "10ml" : null),
     }));
 
-    // تجهيز بيانات الطلب النهائية
     const orderData = {
       ...formData,
       orderItems: orderItems,
       subtotalPrice: subtotal,
-      shippingPrice: shipping,
+      shippingPrice: shippingPrice,
       totalPrice: total,
       checkoutType: isDirectCheckout ? "direct" : "cart",
+      // إضافة معلومات إضافية عن الشحن
+      wilayaCode: selectedWilaya?.wilayaCode || 0,
+      wilayaName: selectedWilaya?.wilayaName || "",
     };
 
     console.log("Sending order data:", orderData);
 
     await createCheckout(orderData);
-
-    setCurrentStep(4); // Success step
+    setCurrentStep(4);
   };
 
   const steps = [
@@ -297,7 +338,7 @@ const Checkout = () => {
     { number: 4, title: "Confirmation", icon: <CheckCircle size={20} /> },
   ];
 
-  if (!hasLoaded) {
+  if (!hasLoaded || shippingLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -311,7 +352,6 @@ const Checkout = () => {
   return (
     <div className="min-h-screen bg-background pt-20">
       <div className="costum-section">
-        {/* Header */}
         <motion.div
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -337,10 +377,8 @@ const Checkout = () => {
             {isDirectCheckout ? "Achat Direct" : "Finaliser la Commande"}
           </h1>
 
-          {/* Progress Steps */}
           <div className="flex justify-center mb-6 sm:mb-8 lg:mb-12">
             <div className="w-full max-w-4xl">
-              {/* Mobile Steps - Vertical Layout */}
               <div className="lg:hidden space-y-4">
                 {steps.map((step, index) => (
                   <div
@@ -396,7 +434,6 @@ const Checkout = () => {
                 ))}
               </div>
 
-              {/* Desktop Steps - Horizontal Layout */}
               <div className="hidden lg:flex items-center justify-between relative">
                 {steps.map((step, index) => (
                   <div
@@ -421,7 +458,6 @@ const Checkout = () => {
                         )}
                       </div>
 
-                      {/* Connecting lines between steps */}
                       {index < steps.length - 1 && (
                         <div
                           className={`w-16 lg:w-24 h-0.5 ${
@@ -433,7 +469,6 @@ const Checkout = () => {
                       )}
                     </div>
 
-                    {/* Step title */}
                     <span
                       className={`mt-3 font-bold01 text-sm lg:text-base text-center ${
                         currentStep >= step.number
@@ -444,7 +479,6 @@ const Checkout = () => {
                       {step.title}
                     </span>
 
-                    {/* Step number indicator */}
                     <div
                       className={`absolute -top-2 -right-2 w-5 h-5 lg:w-6 lg:h-6 rounded-full text-xs flex items-center justify-center font-bold01 ${
                         currentStep >= step.number
@@ -458,7 +492,6 @@ const Checkout = () => {
                 ))}
               </div>
 
-              {/* Current Step Indicator for Mobile */}
               <div className="lg:hidden text-center mt-4 sm:mt-6">
                 <span className="bg-secondary text-primary px-3 sm:px-4 py-1 sm:py-2 rounded-full font-bold01 text-xs sm:text-sm">
                   Étape {currentStep} sur {steps.length} :{" "}
@@ -470,7 +503,6 @@ const Checkout = () => {
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-          {/* Order Summary Sidebar */}
           <div className="lg:col-span-1">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -483,7 +515,6 @@ const Checkout = () => {
                 </h3>
               </div>
 
-              {/* Order Items */}
               <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
                 {items.length === 0 ? (
                   <div className="text-center py-4">
@@ -509,7 +540,6 @@ const Checkout = () => {
                               <span className="text-secondary font-p01 text-sm sm:text-base">
                                 {formatPrice(itemPrice)}
                               </span>
-                              {/* Display volume in checkout */}
                               {(item.selectedSize || item.volume) && (
                                 <span className="ml-2 bg-secondary/20 text-secondary px-2 py-0.5 rounded text-xs font-semibold">
                                   {item.selectedSize || item.volume}
@@ -527,7 +557,6 @@ const Checkout = () => {
                 )}
               </div>
 
-              {/* Order Totals */}
               <div className="space-y-2 sm:space-y-3 border-t border-primary/10 pt-3 sm:pt-4">
                 <div className="flex justify-between text-primary font-bold01 text-sm sm:text-base">
                   <span>
@@ -536,9 +565,27 @@ const Checkout = () => {
                   <span className="font-p01">{formatPrice(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-primary font-bold01 text-sm sm:text-base">
-                  <span>Livraison</span>
-                  <span className="font-p01">{formatPrice(shipping)}</span>
+                  <span>
+                    Livraison{" "}
+                    {selectedWilaya && `(${selectedWilaya.wilayaName})`}
+                  </span>
+                  <span className="font-p01">
+                    {shippingPrice > 0
+                      ? formatPrice(shippingPrice)
+                      : "À calculer"}
+                  </span>
                 </div>
+
+                {/* عرض تحذير إذا كانت الولاية معطلة */}
+                {selectedWilaya && !selectedWilaya.isActive && (
+                  <div className="p-2 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-red-600 text-xs text-center">
+                      ⚠️ La livraison n'est pas disponible pour{" "}
+                      {selectedWilaya.wilayaName}
+                    </p>
+                  </div>
+                )}
+
                 <div className="border-t border-primary/10 pt-2 sm:pt-3">
                   <div className="flex justify-between text-base sm:text-lg font-bold text-primary font-p01">
                     <span>Total</span>
@@ -547,7 +594,6 @@ const Checkout = () => {
                 </div>
               </div>
 
-              {/* Security Badge */}
               {currentStep !== 4 && (
                 <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-primary/5 rounded-xl text-center">
                   <Shield
@@ -562,14 +608,12 @@ const Checkout = () => {
             </motion.div>
           </div>
 
-          {/* Main Content */}
           <div className="lg:col-span-2">
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               className="bg-white rounded-xl shadow-lg border border-primary/10 p-4 sm:p-6"
             >
-              {/* Step 1: Personal Information */}
               {currentStep === 1 && (
                 <div>
                   <h2 className="text-xl sm:text-2xl font-bold text-primary font-p01 mb-4 sm:mb-6">
@@ -659,7 +703,6 @@ const Checkout = () => {
                 </div>
               )}
 
-              {/* Step 2: Shipping */}
               {currentStep === 2 && (
                 <div>
                   <h2 className="text-xl sm:text-2xl font-bold text-primary font-p01 mb-4 sm:mb-6">
@@ -693,11 +736,24 @@ const Checkout = () => {
                           className="w-full p-3 border border-primary/20 rounded-xl focus:outline-none focus:border-secondary text-sm sm:text-base"
                         >
                           <option value="">Sélectionnez votre wilaya</option>
-                          {Object.keys(algeriaWilayas).map((wilaya) => (
-                            <option key={wilaya} value={wilaya}>
-                              {wilaya}
-                            </option>
-                          ))}
+                          {Object.keys(algeriaWilayas).map((wilayaKey) => {
+                            const wilayaData = algeriaWilayas[wilayaKey];
+                            const shippingData = shipping.find(
+                              (s) => s.wilayaCode === wilayaData.code
+                            );
+                            const isActive = shippingData?.isActive || false;
+
+                            return (
+                              <option
+                                key={wilayaKey}
+                                value={wilayaKey}
+                                className={!isActive ? "text-red-500" : ""}
+                              >
+                                {wilayaData.name}{" "}
+                                {!isActive && "(Non disponible)"}
+                              </option>
+                            );
+                          })}
                         </select>
                       </div>
 
@@ -715,11 +771,13 @@ const Checkout = () => {
                         >
                           <option value="">Sélectionnez votre commune</option>
                           {formData.willaya &&
-                            algeriaWilayas[formData.willaya]?.map((commune) => (
-                              <option key={commune} value={commune}>
-                                {commune}
-                              </option>
-                            ))}
+                            algeriaWilayas[formData.willaya]?.communes?.map(
+                              (commune) => (
+                                <option key={commune} value={commune}>
+                                  {commune}
+                                </option>
+                              )
+                            )}
                         </select>
                       </div>
                     </div>
@@ -744,6 +802,11 @@ const Checkout = () => {
                             </span>
                             <p className="text-primary/60 text-xs sm:text-sm">
                               Livraison à l'adresse personnelle
+                              {selectedWilaya && (
+                                <span className="block text-secondary font-bold mt-1">
+                                  {formatPrice(selectedWilaya.homePrice)}
+                                </span>
+                              )}
                             </p>
                           </div>
                         </label>
@@ -762,6 +825,11 @@ const Checkout = () => {
                             </span>
                             <p className="text-primary/60 text-xs sm:text-sm">
                               Livraison à l'adresse professionnelle
+                              {selectedWilaya && (
+                                <span className="block text-secondary font-bold mt-1">
+                                  {formatPrice(selectedWilaya.officePrice)}
+                                </span>
+                              )}
                             </p>
                           </div>
                         </label>
@@ -782,6 +850,59 @@ const Checkout = () => {
                       </select>
                     </div>
 
+                    {/* عرض معلومات الشحن */}
+                    {selectedWilaya && (
+                      <div className="p-3 bg-primary/5 rounded-xl border border-primary/10">
+                        <h4 className="font-bold01 text-primary text-sm mb-2">
+                          Informations de Livraison
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          <div>
+                            <span className="text-primary/60 text-xs">
+                              Wilaya:
+                            </span>
+                            <p className="font-semibold text-primary text-sm">
+                              {selectedWilaya.wilayaName}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-primary/60 text-xs">
+                              Livraison:
+                            </span>
+                            <p className="font-semibold text-primary text-sm">
+                              {formData.deliveryType === "home"
+                                ? "Domicile"
+                                : "Bureau"}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-primary/60 text-xs">
+                              Prix:
+                            </span>
+                            <p className="font-bold text-secondary text-sm">
+                              {formatPrice(shippingPrice)}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-primary/60 text-xs">
+                              Statut:
+                            </span>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs ${
+                                selectedWilaya.isActive
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {selectedWilaya.isActive
+                                ? "Disponible"
+                                : "Non disponible"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
                       <motion.button
                         type="button"
@@ -800,18 +921,20 @@ const Checkout = () => {
                         disabled={
                           !formData.willaya ||
                           !formData.commune ||
-                          !formData.address
+                          !formData.address ||
+                          (selectedWilaya && !selectedWilaya.isActive)
                         }
                         className="flex-1 bg-secondary text-primary py-2 sm:py-3 rounded-xl font-p01 hover:shadow-lg transition-all duration-300 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Continuer vers le Paiement
+                        {selectedWilaya && !selectedWilaya.isActive
+                          ? "Livraison non disponible"
+                          : "Continuer vers le Paiement"}
                       </motion.button>
                     </div>
                   </form>
                 </div>
               )}
 
-              {/* Step 3: Payment */}
               {currentStep === 3 && (
                 <div>
                   <h2 className="text-xl sm:text-2xl font-bold text-primary font-p01 mb-4 sm:mb-6">
@@ -853,7 +976,8 @@ const Checkout = () => {
                         type="submit"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        className="flex-1 bg-secondary text-primary py-2 sm:py-3 rounded-xl font-p01 hover:shadow-lg transition-all duration-300 text-sm sm:text-base"
+                        disabled={selectedWilaya && !selectedWilaya.isActive}
+                        className="flex-1 bg-secondary text-primary py-2 sm:py-3 rounded-xl font-p01 hover:shadow-lg transition-all duration-300 text-sm sm:text-base disabled:opacity-50"
                       >
                         Confirmer la Commande
                       </motion.button>
@@ -862,7 +986,6 @@ const Checkout = () => {
                 </div>
               )}
 
-              {/* Step 4: Success */}
               {currentStep === 4 && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
