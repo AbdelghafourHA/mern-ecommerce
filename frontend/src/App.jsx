@@ -24,6 +24,10 @@ const App = () => {
   const { user, checkAuth, checkingAuth } = useAdminStore();
 
   useEffect(() => {
+    fetch(import.meta.env.VITE_API_URL + "/health").catch(() => {});
+  }, []);
+
+  useEffect(() => {
     checkAuth();
   }, [checkAuth]);
 

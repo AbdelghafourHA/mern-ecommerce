@@ -31,9 +31,11 @@ app.set("trust proxy", 1);
 app.use(helmet());
 app.disable("x-powered-by");
 
+const allowedOrigin = process.env.FRONTEND_URL || "*";
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL,
+    origin: allowedOrigin,
     credentials: true,
   })
 );
@@ -107,17 +109,6 @@ app.use("/api/analytics", verifyAdmin, analyticsRoutes);
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
 });
-
-/* ===============================
-   Production Frontend
-================================ */
-if (process.env.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "frontend-dist")));
-
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(__dirname, "frontend-dist", "index.html"));
-  });
-}
 
 /* ===============================
    Global Error Handler
