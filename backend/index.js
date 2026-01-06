@@ -1,8 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
-import path from "path";
 import cookieParser from "cookie-parser";
-import helmet from "helmet";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
 
@@ -18,22 +16,18 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const __dirname = process.cwd();
 
 /* ===============================
-   Trust Proxy (IMPORTANT for Render / Vercel / Nginx)
+   Trust Proxy (IMPORTANT on Render)
 ================================ */
 app.set("trust proxy", 1);
 
 /* ===============================
-   Security Middlewares
+   CORS (iOS SAFE)
 ================================ */
-app.use(helmet());
-app.disable("x-powered-by");
-
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL,
+    origin: process.env.FRONTEND_URL, // مثال: https://myapp.vercel.app
     credentials: true,
   })
 );
@@ -45,10 +39,10 @@ app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
 /* ===============================
-   Rate Limiters (SMART)
+   Rate Limiters
 ================================ */
 
-// Auth (login / admin)
+// Auth (login)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
@@ -56,25 +50,19 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Checkout (prevent spam orders)
+// Checkout
 const checkoutLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 30,
 });
 
-// Products READ (browsing safe)
+// Products read
 const productsReadLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
   max: 300,
 });
 
-// ✏️ Products WRITE (admin only)
-const productsWriteLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 50,
-});
-
-// Analytics (HEAVY QUERIES)
+// Analytics
 const analyticsLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
   max: 20,
@@ -85,21 +73,19 @@ const analyticsLimiter = rateLimit({
 ================================ */
 
 // Auth
-app.use("/api/auth", authRoutes);
+app.use("/api/auth", authLimiter, authRoutes);
 
-// Products
-app.use("/api/products", productsRoutes);
-
-// Admin write protection (inside routes use verifyAdmin + productsWriteLimiter)
+// Products (public)
+app.use("/api/products", productsReadLimiter, productsRoutes);
 
 // Checkout
-app.use("/api/checkout", checkoutRoutes);
+app.use("/api/checkout", checkoutLimiter, checkoutRoutes);
 
-// Shipping (admin controlled – light)
+// Shipping (admin)
 app.use("/api/shipping", verifyAdmin, shippingRoutes);
 
-// 📊 Analytics (ADMIN + LIMITED)
-app.use("/api/analytics", verifyAdmin, analyticsRoutes);
+// Analytics (admin)
+app.use("/api/analytics", verifyAdmin, analyticsLimiter, analyticsRoutes);
 
 /* ===============================
    Health Check
@@ -114,25 +100,13 @@ app.get("/health", (req, res) => {
 app.use((err, req, res, next) => {
   console.error("❌ Error:", err);
 
-  const statusCode = err.statusCode || 500;
-  res.status(statusCode).json({
+  res.status(err.statusCode || 500).json({
     success: false,
     message:
       process.env.NODE_ENV === "production"
         ? "Something went wrong"
         : err.message,
   });
-});
-
-/* ===============================
-   Process-level Protection
-================================ */
-process.on("unhandledRejection", (err) => {
-  console.error("❌ Unhandled Rejection:", err);
-});
-
-process.on("uncaughtException", (err) => {
-  console.error("❌ Uncaught Exception:", err);
 });
 
 /* ===============================
