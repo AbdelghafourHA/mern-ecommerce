@@ -26,6 +26,7 @@ const setCookies = (res, accessToken, refreshToken) => {
     httpOnly: true,
     secure: true,
     sameSite: "None",
+    path: "/",
     maxAge: 15 * 60 * 1000,
   });
 
@@ -33,6 +34,7 @@ const setCookies = (res, accessToken, refreshToken) => {
     httpOnly: true,
     secure: true,
     sameSite: "None",
+    path: "/",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 };
@@ -82,12 +84,14 @@ export const logoutAdmin = async (req, res) => {
       httpOnly: true,
       secure: true,
       sameSite: "None",
+      path: "/",
     });
 
     res.clearCookie("refreshToken", {
       httpOnly: true,
       secure: true,
       sameSite: "None",
+      path: "/",
     });
     res.json({ message: "Déconnexion réussie" });
   } catch (error) {
@@ -122,6 +126,7 @@ export const refreshToken = async (req, res) => {
       httpOnly: true,
       secure: true,
       sameSite: "None",
+      path: "/",
       maxAge: 15 * 60 * 1000,
     });
 
