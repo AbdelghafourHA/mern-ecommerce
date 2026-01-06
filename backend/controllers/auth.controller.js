@@ -78,8 +78,17 @@ export const logoutAdmin = async (req, res) => {
       );
       await redis.del(`refresh_token:${decoded.adminId}`);
     }
-    res.clearCookie("accessToken");
-    res.clearCookie("refreshToken");
+    res.clearCookie("accessToken", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
+    });
+
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
+    });
     res.json({ message: "Déconnexion réussie" });
   } catch (error) {
     res.status(500).json({ message: "Erreur serveur", error: error.message });
@@ -111,8 +120,8 @@ export const refreshToken = async (req, res) => {
 
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "Strict",
+      secure: true,
+      sameSite: "None",
       maxAge: 15 * 60 * 1000,
     });
 
