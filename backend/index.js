@@ -36,7 +36,6 @@ app.use(
    Core Middlewares
 ================================ */
 app.use(express.json({ limit: "1mb" }));
-app.use(cookieParser());
 
 /* ===============================
    Rate Limiters
