@@ -7,26 +7,35 @@ export const useAdminStore = create((set, get) => ({
   adminsList: [], // Store admins list
   loading: false,
   checkingAuth: true,
+  accessToken: null,
+  refreshTokenValue: null,
+
   login: async (username, password) => {
     set({ loading: true });
     try {
-      const response = await api.post("/auth/login", { username, password });
-      set({ user: response.data, loading: false });
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Erreur de connexion !!");
+      const res = await api.post("/auth/login", { username, password });
+
+      set({
+        user: res.data.admin,
+        accessToken: res.data.accessToken,
+        refreshTokenValue: res.data.refreshToken,
+        loading: false,
+      });
+    } catch (err) {
+      toast.error("Erreur de connexion");
       set({ loading: false });
     }
   },
 
   logout: async () => {
-    try {
-      await api.post("/auth/logout");
-      set({ user: null, adminsList: [] });
-    } catch (error) {
-      toast.error(
-        error.response?.data?.message || "èchec de logout!!" //in french
-      );
-    }
+    const { refreshTokenValue } = get();
+    await api.post("/auth/logout", { refreshToken: refreshTokenValue });
+
+    set({
+      user: null,
+      accessToken: null,
+      refreshTokenValue: null,
+    });
   },
 
   checkAuth: async () => {
@@ -40,18 +49,15 @@ export const useAdminStore = create((set, get) => ({
     }
   },
 
-  refreshToken: async () => {
-    if (get().checkingAuth) return;
+  refreshAccessToken: async () => {
+    const { refreshTokenValue } = get();
+    if (!refreshTokenValue) throw new Error("No refresh token");
 
-    set({ checkingAuth: true });
-    try {
-      const response = await api.post("/auth/refresh-token");
-      set({ checkingAuth: false });
-      return response.data;
-    } catch (error) {
-      set({ user: null, checkingAuth: false });
-      throw error;
-    }
+    const res = await api.post("/auth/refresh-token", {
+      refreshToken: refreshTokenValue,
+    });
+
+    set({ accessToken: res.data.accessToken });
   },
 
   createNewAdmin: async (adminData) => {
@@ -161,32 +167,30 @@ export const useAdminStore = create((set, get) => ({
   },
 }));
 
-// axios interceptor for token refresh
-let refreshPromise = null;
+api.interceptors.request.use((config) => {
+  const token = useAdminStore.getState().accessToken;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 api.interceptors.response.use(
-  (response) => response,
+  (res) => res,
   async (error) => {
     const originalRequest = error.config;
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
       try {
-        if (refreshPromise) {
-          await refreshPromise;
-          return api(originalRequest);
-        }
-
-        refreshPromise = useAdminStore.getState().refreshToken();
-        await refreshPromise;
-        refreshPromise = null;
-
+        await useAdminStore.getState().refreshAccessToken();
         return api(originalRequest);
-      } catch (refreshError) {
+      } catch {
         useAdminStore.getState().logout();
-        return Promise.reject(refreshError);
       }
     }
+
     return Promise.reject(error);
   }
 );

@@ -9,38 +9,23 @@ const ACCESS_SECRET = process.env.ACCESS_TOKEN_SECRET;
 
 export const verifyAdmin = async (req, res, next) => {
   try {
-    const token = req.cookies?.accessToken;
-    if (!token) return res.status(401).json({ message: "No access token" });
-
-    // check blacklist
-    const blacklisted = await redis.get(`blk:access:${token}`);
-    if (blacklisted) {
-      return res.status(401).json({ message: "Access token revoked" });
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "Token manquant" });
     }
 
-    let decoded;
-    try {
-      decoded = jwt.verify(token, ACCESS_SECRET);
-    } catch (err) {
-      if (err.name === "TokenExpiredError") {
-        return res.status(401).json({ message: "Access token expired" });
-      }
-      return res.status(401).json({ message: "Invalid access token" });
-    }
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
 
     const admin = await Admin.findById(decoded.adminId).select("-password");
-    if (!admin) return res.status(401).json({ message: "Admin not found" });
-
-    // check lock
-    if (admin.isLocked) {
-      return res.status(423).json({ message: "Account temporarily locked" });
+    if (!admin) {
+      return res.status(401).json({ message: "Admin introuvable" });
     }
 
     req.admin = admin;
     next();
-  } catch (error) {
-    console.error("verifyAdmin error:", error);
-    res.status(500).json({ message: "Server error" });
+  } catch {
+    res.status(401).json({ message: "Token invalide ou expiré" });
   }
 };
 

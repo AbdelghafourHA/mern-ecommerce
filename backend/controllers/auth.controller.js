@@ -21,58 +21,73 @@ const storeRefreshToken = async (adminId, refreshToken) => {
   );
 };
 
-const setCookies = (res, accessToken, refreshToken) => {
-  res.cookie("accessToken", accessToken, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "None",
-    path: "/",
-    maxAge: 15 * 60 * 1000,
-  });
+// const setCookies = (res, accessToken, refreshToken) => {
+//   res.cookie("accessToken", accessToken, {
+//     httpOnly: true,
+//     secure: true,
+//     sameSite: "None",
+//     path: "/",
+//     maxAge: 15 * 60 * 1000,
+//   });
 
-  res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "None",
-    path: "/",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
-};
+//   res.cookie("refreshToken", refreshToken, {
+//     httpOnly: true,
+//     secure: true,
+//     sameSite: "None",
+//     path: "/",
+//     maxAge: 7 * 24 * 60 * 60 * 1000,
+//   });
+// };
 
 export const loginAdmin = async (req, res) => {
   try {
     const { username, password } = req.body;
-    const userExists = await Admin.findOne({ username });
-    if (!userExists) {
-      return res
-        .status(400)
-        .json({ message: "Nom d'utilisateur ou mot de passe incorrect" });
+
+    const admin = await Admin.findOne({ username });
+    if (!admin) {
+      return res.status(400).json({ message: "Identifiants incorrects" });
     }
 
-    const isMatch = await userExists.matchPassword(password);
+    const isMatch = await admin.matchPassword(password);
     if (!isMatch) {
-      return res
-        .status(400)
-        .json({ message: "Nom d'utilisateur ou mot de passe incorrect" });
+      return res.status(400).json({ message: "Identifiants incorrects" });
     }
 
-    const { accessToken, refreshToken } = generateToken(userExists._id);
-    await storeRefreshToken(userExists._id, refreshToken);
-    setCookies(res, accessToken, refreshToken);
+    const accessToken = jwt.sign(
+      { adminId: admin._id },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: "15m" }
+    );
 
-    // Return admin without password
-    const adminData = userExists.toObject();
+    const refreshToken = jwt.sign(
+      { adminId: admin._id },
+      process.env.REFRESH_TOKEN_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    await redis.set(
+      `refresh_token:${admin._id}`,
+      refreshToken,
+      "EX",
+      7 * 24 * 60 * 60
+    );
+
+    const adminData = admin.toObject();
     delete adminData.password;
 
-    res.status(200).json(adminData);
-  } catch (error) {
-    res.status(500).json({ message: "Erreur serveur", error: error.message });
+    res.status(200).json({
+      admin: adminData,
+      accessToken,
+      refreshToken,
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Erreur serveur" });
   }
 };
 
 export const logoutAdmin = async (req, res) => {
   try {
-    const refreshToken = req.cookies.refreshToken;
+    const { refreshToken } = req.body;
     if (refreshToken) {
       const decoded = jwt.verify(
         refreshToken,
@@ -80,59 +95,35 @@ export const logoutAdmin = async (req, res) => {
       );
       await redis.del(`refresh_token:${decoded.adminId}`);
     }
-    res.clearCookie("accessToken", {
-      httpOnly: true,
-      secure: true,
-      sameSite: "None",
-      path: "/",
-    });
-
-    res.clearCookie("refreshToken", {
-      httpOnly: true,
-      secure: true,
-      sameSite: "None",
-      path: "/",
-    });
     res.json({ message: "Déconnexion réussie" });
-  } catch (error) {
-    res.status(500).json({ message: "Erreur serveur", error: error.message });
+  } catch {
+    res.status(500).json({ message: "Erreur logout" });
   }
 };
 
 export const refreshToken = async (req, res) => {
   try {
-    const refreshToken = req.cookies.refreshToken;
+    const { refreshToken } = req.body;
     if (!refreshToken) {
-      return res
-        .status(401)
-        .json({ message: "Aucun jeton de rafraîchissement fourni" });
+      return res.status(401).json({ message: "Refresh token manquant" });
     }
 
     const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
-    const storedToken = await redis.get(`refresh_token:${decoded.adminId}`);
-    if (storedToken !== refreshToken) {
-      return res
-        .status(401)
-        .json({ message: "Jeton de rafraîchissement invalide" });
+
+    const stored = await redis.get(`refresh_token:${decoded.adminId}`);
+    if (stored !== refreshToken) {
+      return res.status(401).json({ message: "Refresh token invalide" });
     }
 
-    const accessToken = jwt.sign(
+    const newAccessToken = jwt.sign(
       { adminId: decoded.adminId },
       process.env.ACCESS_TOKEN_SECRET,
       { expiresIn: "15m" }
     );
 
-    res.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "None",
-      path: "/",
-      maxAge: 15 * 60 * 1000,
-    });
-
-    res.json({ message: "Jeton d'accès rafraîchi" });
-  } catch (error) {
-    res.status(500).json({ message: "Erreur serveur", error: error.message });
+    res.json({ accessToken: newAccessToken });
+  } catch (err) {
+    res.status(401).json({ message: "Refresh échoué" });
   }
 };
 
