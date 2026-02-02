@@ -8,6 +8,7 @@ import {
   getProductsByCategory,
   toggleFeatured,
   toggleInStock,
+  updateProduct,
   updateProductPricing,
   updateProductDiscount,
   applyDiscountToAll,
