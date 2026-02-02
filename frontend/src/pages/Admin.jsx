@@ -763,7 +763,7 @@ const ProductsManager = ({ formatPrice }) => {
                                 }`}
                               >
                                 <PackageCheck
-                                  size={16}
+                                  size={15}
                                   fill={
                                     product.inStock ? "currentColor" : "none"
                                   }
