@@ -233,7 +233,31 @@ const Home = () => {
             {products.map((product, index) => {
               const finalPrice = calculateFinalPrice(product);
               const hasDiscount = product.discount > 0;
+              const availableSizes = product.availableSizes || [
+                "10ml",
+                "20ml",
+                "30ml",
+              ];
+              const defaultVolume = product.defaultVolume || "10ml";
 
+              const handleAddToCart = () => {
+                if (product.category === "Decants") {
+                  // Get default volume from product data
+                  const defaultVolume = product.defaultVolume || "10ml";
+
+                  // Create a new object with the decant data plus volume information
+                  const decantWithVolume = {
+                    ...product,
+                    volume: defaultVolume, // Use default volume from product
+                    // If volume pricing exists, use the price for the default volume
+                    price: product.volumePricing?.[defaultVolume] || finalPrice,
+                  };
+                  addToCart(decantWithVolume);
+                } else {
+                  // For non-decant products, add normally
+                  addToCart(product);
+                }
+              };
               return (
                 <motion.div
                   layout
@@ -252,10 +276,12 @@ const Home = () => {
                         alt={product.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
-                      {/* Top Badges - Category and Gender always on top */}
+
+                      {/* Top Badges - Responsive positioning */}
                       <div className="absolute top-2 right-2 bg-secondary text-primary px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold">
                         {product.category}
                       </div>
+
                       <div className="absolute top-2 left-2 bg-accent text-primary px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold capitalize">
                         {Array.isArray(product.gender) &&
                         product.gender.length > 1
@@ -268,7 +294,7 @@ const Home = () => {
                           : product.gender}
                       </div>
 
-                      {/* Discount Badge below gender badge */}
+                      {/* Discount Badge - Responsive size */}
                       {hasDiscount && (
                         <div className="absolute top-10 left-2 bg-red-500 text-white px-2 py-1 rounded-full text-[10px] sm:text-xs font-bold">
                           -{product.discount}%
@@ -304,18 +330,34 @@ const Home = () => {
                           </span>
                         )}
                       </div>
+                      {/* Volume display for Decants */}
+                      {product.category === "Decants" && (
+                        <div className="mt-2">
+                          <span className="inline-block bg-secondary/20 text-secondary text-xs px-2 py-1 rounded-full font-semibold">
+                            {defaultVolume} (Par défaut)
+                          </span>
+                          <p className="text-xs text-primary/60 mt-1">
+                            Tailles disponibles: {availableSizes.join(", ")}
+                          </p>
+                          <p className="text-xs text-primary/60 mt-1">
+                            Cliquez pour choisir d'autres volumes et prix
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     {/* Add to Cart Button - Responsive text and padding */}
                     <motion.button
-                      onClick={() => addToCart(product)}
+                      onClick={handleAddToCart}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       className="w-full bg-primary text-background py-2 px-2 sm:px-3 rounded-xl font-semibold hover:bg-primary/90 transition-all duration-300 flex items-center justify-center space-x-1 sm:space-x-2 mt-auto"
                     >
                       <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4" />
                       <span className="truncate text-sm md:text-base lg:text-lg">
-                        Ajouter
+                        {product.category === "Decants"
+                          ? `Ajouter (${defaultVolume})`
+                          : "Ajouter"}
                       </span>
                     </motion.button>
                   </div>
