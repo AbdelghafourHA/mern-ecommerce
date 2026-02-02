@@ -418,6 +418,10 @@ const ProductCard = ({ product, formatPrice, calculateFinalPrice }) => {
               -{product.discount}%
             </div>
           )}
+
+          <div className="absolute top-10 right-2 bg-primary text-white px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold">
+            {product.inStock ? "En stock" : "Rupture de stock"}
+          </div>
         </div>
       </Link>
 

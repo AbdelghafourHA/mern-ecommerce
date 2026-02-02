@@ -419,6 +419,10 @@ const CosmeticCard = ({ cosmetic, formatPrice, calculateFinalPrice }) => {
               -{cosmetic.discount}%
             </div>
           )}
+
+          <div className="absolute top-10 right-2 bg-primary text-white px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold">
+            {cosmetic.inStock ? "En stock" : "Rupture de stock"}
+          </div>
         </div>
       </Link>
 
