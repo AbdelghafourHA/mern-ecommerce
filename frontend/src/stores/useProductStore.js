@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import toast from "react-hot-toast";
 import api from "../api/axios.js";
-import { toggleInStock } from "../../../backend/controllers/products.controller.js";
 
 export const useProductStore = create((set, get) => ({
   products: [],
