@@ -758,12 +758,13 @@ const ProductsManager = ({ formatPrice }) => {
                                 onClick={() => toggleInStock(product._id)}
                                 className={`p-2 rounded-full transition-colors ${
                                   product.inStock
-                                    ? "bg-accent/20 text-accent"
+                                    ? "bg-secondary/20 text-secondary"
                                     : "bg-primary/10 text-primary/40 hover:text-primary/60"
                                 }`}
                               >
+                                secendary
                                 <PackageCheck
-                                  size={15}
+                                  size={16}
                                   fill={
                                     product.inStock ? "currentColor" : "none"
                                   }
