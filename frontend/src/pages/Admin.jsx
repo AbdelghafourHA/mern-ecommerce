@@ -36,6 +36,7 @@ import {
   Building,
   ToggleLeft,
   ToggleRight,
+  PackageCheck,
 } from "lucide-react";
 import { useAdminStore } from "../stores/useAdminStore";
 import { useProductStore } from "../stores/useProductStore";
@@ -221,6 +222,7 @@ const ProductsManager = ({ formatPrice }) => {
     setFilter,
     deleteProduct,
     toggleFeatured,
+    toggleInStock,
     productDiscount,
     applyDiscountToAll,
     removeDiscountFromAll,
@@ -749,6 +751,21 @@ const ProductsManager = ({ formatPrice }) => {
                                   size={16}
                                   fill={
                                     product.isFeatured ? "currentColor" : "none"
+                                  }
+                                />
+                              </button>
+                              <button
+                                onClick={() => toggleInStock(product._id)}
+                                className={`p-2 rounded-full transition-colors ${
+                                  product.inStock
+                                    ? "bg-accent/20 text-accent"
+                                    : "bg-primary/10 text-primary/40 hover:text-primary/60"
+                                }`}
+                              >
+                                <PackageCheck
+                                  size={16}
+                                  fill={
+                                    product.inStock ? "currentColor" : "none"
                                   }
                                 />
                               </button>

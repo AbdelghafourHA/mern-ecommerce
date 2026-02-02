@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import toast from "react-hot-toast";
 import api from "../api/axios.js";
+import { toggleInStock } from "../../../backend/controllers/products.controller.js";
 
 export const useProductStore = create((set, get) => ({
   products: [],
@@ -192,6 +193,30 @@ export const useProductStore = create((set, get) => ({
         products: state.products.map((product) =>
           product._id === productId
             ? { ...product, isFeatured: !product.isFeatured }
+            : product
+        ),
+      }));
+
+      toast.error(error.response?.data?.error || "Failed to update product");
+    }
+  },
+  toggleInStock: async (productId) => {
+    set((state) => ({
+      products: state.products.map((product) =>
+        product._id === productId
+          ? { ...product, inStock: !product.inStock }
+          : product
+      ),
+    }));
+
+    try {
+      await api.patch(`/products/${productId}/stock`);
+      toast.success("Le produit a été mis à jour avec succès");
+    } catch (error) {
+      set((state) => ({
+        products: state.products.map((product) =>
+          product._id === productId
+            ? { ...product, inStock: !product.inStock }
             : product
         ),
       }));

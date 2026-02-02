@@ -7,6 +7,7 @@ import {
   getProductById,
   getProductsByCategory,
   toggleFeatured,
+  toggleInStock
   updateProduct,
   updateProductPricing,
   updateProductDiscount,
@@ -25,6 +26,7 @@ router.get("/:productId", getProductById);
 router.post("/", verifyAdmin, adminRoute, createProduct);
 router.delete("/:id", verifyAdmin, adminRoute, deleteProduct);
 router.patch("/:id", verifyAdmin, adminRoute, toggleFeatured);
+router.patch("/:id/stock", verifyAdmin, adminRoute, toggleInStock);
 router.put("/:id", verifyAdmin, adminRoute, updateProduct);
 router.put(
   "/:productId/discount",

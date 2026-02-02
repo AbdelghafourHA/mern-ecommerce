@@ -50,7 +50,7 @@ const productSchema = new mongoose.Schema(
     // ADD VOLUME PRICING FOR DECANTS
     volumePricing: {
       type: Map,
-      of: Number, // e.g., { "10ml": 1500, "20ml": 2500, "30ml": 3500 }
+      of: Number,
       default: {},
     },
     // Store discounted volume prices separately

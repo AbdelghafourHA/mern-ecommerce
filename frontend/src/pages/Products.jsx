@@ -531,7 +531,6 @@ const ProductCard = ({ product, formatPrice, calculateFinalPrice }) => {
   );
 };
 
-// Enhanced Filter Sidebar مع ربط بالـ Store
 const FilterSidebar = ({ isOpen, onClose, genders, formatPrice }) => {
   const { filters, setFilter, setPage } = useProductStore();
 
