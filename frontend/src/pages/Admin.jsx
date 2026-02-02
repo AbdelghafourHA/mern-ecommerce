@@ -762,7 +762,6 @@ const ProductsManager = ({ formatPrice }) => {
                                     : "bg-primary/10 text-primary/40 hover:text-primary/60"
                                 }`}
                               >
-                                secendary
                                 <PackageCheck
                                   size={16}
                                   fill={
