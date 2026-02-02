@@ -758,7 +758,7 @@ const ProductsManager = ({ formatPrice }) => {
                                 onClick={() => toggleInStock(product._id)}
                                 className={`p-2 rounded-full transition-colors ${
                                   product.inStock
-                                    ? "bg-secondary/20 text-secondary"
+                                    ? "bg-secondary/20 text-primary"
                                     : "bg-primary/10 text-primary/40 hover:text-primary/60"
                                 }`}
                               >
@@ -932,6 +932,19 @@ const ProductsManager = ({ formatPrice }) => {
                               fill={
                                 product.isFeatured ? "currentColor" : "none"
                               }
+                            />
+                          </button>
+                          <button
+                            onClick={() => toggleInStock(product._id)}
+                            className={`p-1 rounded-full transition-colors ${
+                              product.inStock
+                                ? "bg-secondary/20 text-primary"
+                                : "bg-primary/10 text-primary/40 hover:text-primary/60"
+                            }`}
+                          >
+                            <PackageCheck
+                              size={14}
+                              fill={product.inStock ? "currentColor" : "none"}
                             />
                           </button>
                           <button
