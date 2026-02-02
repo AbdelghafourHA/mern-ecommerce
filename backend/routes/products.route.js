@@ -7,8 +7,7 @@ import {
   getProductById,
   getProductsByCategory,
   toggleFeatured,
-  toggleInStock
-  updateProduct,
+  toggleInStock,
   updateProductPricing,
   updateProductDiscount,
   applyDiscountToAll,
