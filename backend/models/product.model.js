@@ -43,6 +43,10 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    inStock: {
+      type: Boolean,
+      default: true,
+    },
     // ADD VOLUME PRICING FOR DECANTS
     volumePricing: {
       type: Map,

@@ -449,6 +449,9 @@ const ProductCard = ({ product, formatPrice, calculateFinalPrice }) => {
           <div className="absolute top-2 right-2 bg-secondary text-primary px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold">
             {product.category}
           </div>
+          <div className="absolute top-2 right-2 bg-primary text-white px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold">
+            {product.inStock ? "En stock" : "Rupture de stock"}
+          </div>
           <div className="absolute top-2 left-2 bg-accent text-primary px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold capitalize">
             {Array.isArray(product.gender) && product.gender.length > 1
               ? "Unisexe"
