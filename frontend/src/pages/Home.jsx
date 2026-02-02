@@ -231,7 +231,6 @@ const Home = () => {
             className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"
           >
             {products.map((product, index) => {
-              // حساب السعر النهائي
               const finalPrice = calculateFinalPrice(product);
               const hasDiscount = product.discount > 0;
 
@@ -258,7 +257,15 @@ const Home = () => {
                         {product.category}
                       </div>
                       <div className="absolute top-2 left-2 bg-accent text-primary px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold capitalize">
-                        {product.gender}
+                        {Array.isArray(product.gender) &&
+                        product.gender.length > 1
+                          ? "Unisexe"
+                          : Array.isArray(product.gender) &&
+                            product.gender.length === 1
+                          ? product.gender[0]
+                          : Array.isArray(product.gender)
+                          ? product.gender.join(", ")
+                          : product.gender}
                       </div>
 
                       {/* Discount Badge below gender badge */}
