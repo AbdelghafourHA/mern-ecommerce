@@ -277,6 +277,7 @@ const Products = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="flex justify-center items-center mt-12 space-x-4"
               >
+                {/* Previous Button */}
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
@@ -293,35 +294,64 @@ const Products = () => {
                   <ChevronLeft size={24} />
                 </motion.button>
 
+                {/* Page Numbers */}
                 <div className="flex items-center space-x-2">
-                  {/* Current page first */}
+                  {/* Always show page 1 */}
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
-                    onClick={() => goToPage(pagination.currentPage)}
-                    className="w-10 h-10 rounded-full font-semibold bg-secondary text-background"
+                    onClick={() => goToPage(1)}
+                    className={`w-10 h-10 rounded-full font-semibold ${
+                      pagination.currentPage === 1
+                        ? "bg-secondary text-background"
+                        : "text-primary hover:bg-primary/10"
+                    }`}
                   >
-                    {pagination.currentPage}
+                    1
                   </motion.button>
 
-                  {/* Dots if not last page */}
-                  {pagination.currentPage < pagination.totalPages - 1 && (
+                  {/* Show dots if current page > 3 */}
+                  {pagination.currentPage > 3 && pagination.totalPages > 4 && (
                     <span className="text-primary/60 px-1">…</span>
                   )}
 
-                  {/* Last page */}
-                  {pagination.currentPage !== pagination.totalPages && (
+                  {/* Show current page if not page 1 or last page */}
+                  {pagination.currentPage > 1 &&
+                    pagination.currentPage < pagination.totalPages && (
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => goToPage(pagination.currentPage)}
+                        className="w-10 h-10 rounded-full font-semibold bg-secondary text-background"
+                      >
+                        {pagination.currentPage}
+                      </motion.button>
+                    )}
+
+                  {/* Show dots if current page is far from last page */}
+                  {pagination.currentPage < pagination.totalPages - 2 &&
+                    pagination.totalPages > 4 && (
+                      <span className="text-primary/60 px-1">…</span>
+                    )}
+
+                  {/* Show last page if more than 1 page */}
+                  {pagination.totalPages > 1 && (
                     <motion.button
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={() => goToPage(pagination.totalPages)}
-                      className="w-10 h-10 rounded-full font-semibold text-primary hover:bg-primary/10"
+                      className={`w-10 h-10 rounded-full font-semibold ${
+                        pagination.currentPage === pagination.totalPages
+                          ? "bg-secondary text-background"
+                          : "text-primary hover:bg-primary/10"
+                      }`}
                     >
                       {pagination.totalPages}
                     </motion.button>
                   )}
                 </div>
 
+                {/* Next Button */}
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
@@ -343,6 +373,7 @@ const Products = () => {
                   <ChevronRight size={24} />
                 </motion.button>
 
+                {/* Current page indicator */}
                 <span className="text-primary/60 text-sm ml-4">
                   Page {pagination.currentPage} sur {pagination.totalPages}
                 </span>
