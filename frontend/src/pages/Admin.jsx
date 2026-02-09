@@ -204,7 +204,9 @@ const Admin = () => {
 const ProductsManager = ({ formatPrice }) => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [bulkDiscount, setBulkDiscount] = useState({
+    type: "percentage", // "percentage" أو "fixed"
     discount: 0,
+    fixedPrice: 0,
     categories: [],
     applyToAll: true,
   });
@@ -260,11 +262,22 @@ const ProductsManager = ({ formatPrice }) => {
     ...new Set(products.map((p) => p.category).filter(Boolean)),
   ];
 
-  const handleDiscountChange = async (productId, newDiscount) => {
+  const handleDiscountChange = async (
+    productId,
+    value,
+    type = "percentage"
+  ) => {
     try {
-      await productDiscount(productId, newDiscount);
+      if (type === "percentage") {
+        await productDiscount(productId, value);
+      } else {
+        await updateProduct(productId, {
+          finalPrice: value,
+          discount: 0,
+        });
+      }
     } catch (error) {
-      console.error("Error updating discount:", error);
+      console.error("Error updating price:", error);
     }
   };
 
@@ -298,6 +311,10 @@ const ProductsManager = ({ formatPrice }) => {
   const getFinalPrice = (product) => {
     const displayPrice = getDisplayPrice(product);
 
+    if (product.finalPrice && product.finalPrice > 0) {
+      return product.finalPrice;
+    }
+
     if (product.discount > 0) {
       return Math.round(displayPrice * (1 - product.discount / 100));
     }
@@ -306,9 +323,16 @@ const ProductsManager = ({ formatPrice }) => {
   };
 
   const handleBulkDiscount = async () => {
-    if (bulkDiscount.discount < 0 || bulkDiscount.discount > 100) {
-      toast.error("Le discount doit être entre 0 et 100%");
-      return;
+    if (bulkDiscount.type === "percentage") {
+      if (bulkDiscount.discount < 0 || bulkDiscount.discount > 100) {
+        toast.error("Le discount doit être entre 0 et 100%");
+        return;
+      }
+    } else if (bulkDiscount.type === "fixed") {
+      if (bulkDiscount.fixedPrice <= 0) {
+        toast.error("Le prix fixe doit être supérieur à 0");
+        return;
+      }
     }
 
     if (!bulkDiscount.applyToAll && bulkDiscount.categories.length === 0) {
@@ -319,10 +343,24 @@ const ProductsManager = ({ formatPrice }) => {
     setApplyingBulkDiscount(true);
     try {
       const categories = bulkDiscount.applyToAll ? [] : bulkDiscount.categories;
-      await applyDiscountToAll(bulkDiscount.discount, categories);
-      toast.success(
-        `Discount de ${bulkDiscount.discount}% appliqué avec succès!`
-      );
+
+      if (bulkDiscount.type === "percentage") {
+        await applyDiscountToAll(
+          bulkDiscount.discount,
+          categories,
+          "percentage"
+        );
+        toast.success(
+          `Discount de ${bulkDiscount.discount}% appliqué avec succès!`
+        );
+      } else {
+        await applyDiscountToAll(bulkDiscount.fixedPrice, categories, "fixed");
+        toast.success(
+          `Prix fixe de ${formatPrice(
+            bulkDiscount.fixedPrice
+          )} appliqué avec succès!`
+        );
+      }
     } catch (error) {
       toast.error("Erreur lors de l'application du discount");
     } finally {
@@ -443,62 +481,120 @@ const ProductsManager = ({ formatPrice }) => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-primary font-bold01 mb-2 text-sm">
-                  Pourcentage de Discount
+                  Type de Discount
                 </label>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={bulkDiscount.discount}
-                    onChange={(e) =>
-                      setBulkDiscount({
-                        ...bulkDiscount,
-                        discount: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    className="w-20 lg:w-24 p-2 lg:p-3 border border-primary/20 rounded-xl focus:outline-none focus:border-secondary text-sm"
-                  />
-                  <span className="text-primary font-bold01 text-sm">%</span>
+                <div className="flex space-x-4">
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      value="percentage"
+                      checked={bulkDiscount.type === "percentage"}
+                      onChange={(e) =>
+                        setBulkDiscount({
+                          ...bulkDiscount,
+                          type: e.target.value,
+                          discount: 0,
+                          fixedPrice: 0,
+                        })
+                      }
+                      className="text-secondary focus:ring-secondary"
+                    />
+                    <span className="text-sm">Pourcentage %</span>
+                  </label>
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      value="fixed"
+                      checked={bulkDiscount.type === "fixed"}
+                      onChange={(e) =>
+                        setBulkDiscount({
+                          ...bulkDiscount,
+                          type: e.target.value,
+                          discount: 0,
+                          fixedPrice: 0,
+                        })
+                      }
+                      className="text-secondary focus:ring-secondary"
+                    />
+                    <span className="text-sm">Prix Fixe</span>
+                  </label>
                 </div>
               </div>
 
               <div>
                 <label className="block text-primary font-bold01 mb-2 text-sm">
-                  Appliquer à
+                  {bulkDiscount.type === "percentage"
+                    ? "Pourcentage de Discount"
+                    : "Prix Fixe"}
                 </label>
-                <div className="space-y-2">
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="radio"
-                      checked={bulkDiscount.applyToAll}
-                      onChange={() =>
-                        setBulkDiscount({
-                          ...bulkDiscount,
-                          applyToAll: true,
-                          categories: [],
-                        })
-                      }
-                      className="text-secondary focus:ring-secondary"
-                    />
-                    <span className="text-sm">Tous les produits</span>
-                  </label>
-
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="radio"
-                      checked={!bulkDiscount.applyToAll}
-                      onChange={() =>
-                        setBulkDiscount({
-                          ...bulkDiscount,
-                          applyToAll: false,
-                        })
-                      }
-                      className="text-secondary focus:ring-secondary"
-                    />
-                    <span className="text-sm">Catégories spécifiques</span>
-                  </label>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="number"
+                    min={bulkDiscount.type === "percentage" ? "0" : "1"}
+                    max={bulkDiscount.type === "percentage" ? "100" : "1000000"}
+                    value={
+                      bulkDiscount.type === "percentage"
+                        ? bulkDiscount.discount
+                        : bulkDiscount.fixedPrice
+                    }
+                    onChange={(e) =>
+                      setBulkDiscount({
+                        ...bulkDiscount,
+                        [bulkDiscount.type === "percentage"
+                          ? "discount"
+                          : "fixedPrice"]: parseInt(e.target.value) || 0,
+                      })
+                    }
+                    className="w-20 lg:w-24 p-2 lg:p-3 border border-primary/20 rounded-xl focus:outline-none focus:border-secondary text-sm"
+                  />
+                  <span className="text-primary font-bold01 text-sm">
+                    {bulkDiscount.type === "percentage" ? "%" : "DA"}
+                  </span>
                 </div>
+                {bulkDiscount.type === "fixed" &&
+                  bulkDiscount.fixedPrice > 0 && (
+                    <p className="text-xs text-green-600 mt-1">
+                      Prix fixe: {formatPrice(bulkDiscount.fixedPrice)}
+                    </p>
+                  )}
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-primary font-bold01 mb-2 text-sm">
+                Appliquer à
+              </label>
+              <div className="space-y-2">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    checked={bulkDiscount.applyToAll}
+                    onChange={() =>
+                      setBulkDiscount({
+                        ...bulkDiscount,
+                        applyToAll: true,
+                        categories: [],
+                      })
+                    }
+                    className="text-secondary focus:ring-secondary"
+                  />
+                  <span className="text-sm">Tous les produits</span>
+                </label>
+
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    checked={!bulkDiscount.applyToAll}
+                    onChange={() =>
+                      setBulkDiscount({
+                        ...bulkDiscount,
+                        applyToAll: false,
+                      })
+                    }
+                    className="text-secondary focus:ring-secondary"
+                  />
+                  <span className="text-sm">Catégories spécifiques</span>
+                </label>
               </div>
             </div>
 
@@ -543,7 +639,10 @@ const ProductsManager = ({ formatPrice }) => {
                 onClick={handleBulkDiscount}
                 disabled={
                   applyingBulkDiscount ||
-                  bulkDiscount.discount === 0 ||
+                  (bulkDiscount.type === "percentage" &&
+                    bulkDiscount.discount === 0) ||
+                  (bulkDiscount.type === "fixed" &&
+                    bulkDiscount.fixedPrice === 0) ||
                   (!bulkDiscount.applyToAll &&
                     bulkDiscount.categories.length === 0)
                 }
@@ -557,7 +656,11 @@ const ProductsManager = ({ formatPrice }) => {
                 ) : (
                   <>
                     <Percent size={16} />
-                    <span>Appliquer {bulkDiscount.discount}%</span>
+                    <span>
+                      {bulkDiscount.type === "percentage"
+                        ? `Appliquer ${bulkDiscount.discount}%`
+                        : `Appliquer ${formatPrice(bulkDiscount.fixedPrice)}`}
+                    </span>
                   </>
                 )}
               </button>
@@ -702,28 +805,59 @@ const ProductsManager = ({ formatPrice }) => {
                             </div>
                           </td>
                           <td className="py-3 px-4">
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="number"
-                                min="0"
-                                max="100"
-                                value={product.discount || 0}
-                                onChange={(e) =>
-                                  handleDiscountChange(
-                                    product._id,
-                                    parseInt(e.target.value) || 0
-                                  )
-                                }
-                                className="w-14 p-2 border border-primary/20 rounded-lg text-center text-sm focus:outline-none focus:border-secondary"
-                              />
-                              <span className="text-primary/60 text-xs">%</span>
+                            <div className="space-y-2">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-primary/60 text-xs whitespace-nowrap">
+                                  %:
+                                </span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  value={product.discount || 0}
+                                  onChange={(e) =>
+                                    handleDiscountChange(
+                                      product._id,
+                                      parseInt(e.target.value) || 0,
+                                      "percentage"
+                                    )
+                                  }
+                                  className="w-14 p-1 border border-primary/20 rounded-lg text-center text-xs focus:outline-none focus:border-secondary"
+                                />
+                                <span className="text-primary/60 text-xs">
+                                  %
+                                </span>
+                              </div>
+
+                              <div className="flex items-center space-x-2">
+                                <span className="text-primary/60 text-xs whitespace-nowrap">
+                                  Prix:
+                                </span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={product.finalPrice || ""}
+                                  placeholder="Prix direct"
+                                  onChange={(e) =>
+                                    handleDiscountChange(
+                                      product._id,
+                                      parseInt(e.target.value) || 0,
+                                      "fixed"
+                                    )
+                                  }
+                                  className="w-20 p-1 border border-primary/20 rounded-lg text-center text-xs focus:outline-none focus:border-secondary"
+                                />
+                                <span className="text-primary/60 text-xs">
+                                  DA
+                                </span>
+                              </div>
                             </div>
                           </td>
                           <td className="py-3 px-4">
                             <div className="space-y-1">
                               <div
                                 className={`font-semibold font-p01 text-sm ${
-                                  product.discount > 0
+                                  product.discount > 0 || product.finalPrice
                                     ? "text-green-600"
                                     : "text-primary"
                                 }`}
@@ -731,8 +865,17 @@ const ProductsManager = ({ formatPrice }) => {
                                 {formatPrice(finalPrice)}
                               </div>
                               {savings > 0 && (
-                                <div className="text-xs text-red-600 font-p01">
-                                  -{formatPrice(savings)}
+                                <div className="space-y-1">
+                                  <div className="text-xs text-red-600 font-p01">
+                                    -{formatPrice(savings)}
+                                  </div>
+                                  {product.finalPrice && (
+                                    <div className="text-xs text-blue-600 font-p01">
+                                      {product.discount > 0
+                                        ? `(avec ${product.discount}% discount)`
+                                        : "(Prix fixe)"}
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -882,7 +1025,7 @@ const ProductsManager = ({ formatPrice }) => {
                           </p>
                           <p
                             className={`font-semibold text-sm ${
-                              product.discount > 0
+                              product.discount > 0 || product.finalPrice
                                 ? "text-green-600"
                                 : "text-primary"
                             }`}
@@ -897,27 +1040,55 @@ const ProductsManager = ({ formatPrice }) => {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
+                      <div className="space-y-2 mb-3">
+                        <div className="flex items-center justify-between">
                           <span className="text-primary/60 text-xs">
-                            Discount:
+                            Discount %:
                           </span>
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            value={product.discount || 0}
-                            onChange={(e) =>
-                              handleDiscountChange(
-                                product._id,
-                                parseInt(e.target.value) || 0
-                              )
-                            }
-                            className="w-14 p-1 border border-primary/20 rounded text-center text-xs focus:outline-none focus:border-secondary"
-                          />
-                          <span className="text-primary/60 text-xs">%</span>
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={product.discount || 0}
+                              onChange={(e) =>
+                                handleDiscountChange(
+                                  product._id,
+                                  parseInt(e.target.value) || 0,
+                                  "percentage"
+                                )
+                              }
+                              className="w-14 p-1 border border-primary/20 rounded text-center text-xs focus:outline-none focus:border-secondary"
+                            />
+                            <span className="text-primary/60 text-xs">%</span>
+                          </div>
                         </div>
 
+                        <div className="flex items-center justify-between">
+                          <span className="text-primary/60 text-xs">
+                            Prix Direct:
+                          </span>
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="number"
+                              min="0"
+                              value={product.finalPrice || ""}
+                              placeholder="Prix direct"
+                              onChange={(e) =>
+                                handleDiscountChange(
+                                  product._id,
+                                  parseInt(e.target.value) || 0,
+                                  "fixed"
+                                )
+                              }
+                              className="w-20 p-1 border border-primary/20 rounded text-center text-xs focus:outline-none focus:border-secondary"
+                            />
+                            <span className="text-primary/60 text-xs">DA</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-3 border-t border-primary/10">
                         <div className="flex items-center space-x-2">
                           <button
                             onClick={() => toggleFeatured(product._id)}
@@ -947,6 +1118,8 @@ const ProductsManager = ({ formatPrice }) => {
                               fill={product.inStock ? "currentColor" : "none"}
                             />
                           </button>
+                        </div>
+                        <div className="flex items-center space-x-2">
                           <button
                             onClick={() => setEditingProduct(product)}
                             className="p-1 bg-primary/10 text-primary rounded-lg"
