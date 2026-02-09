@@ -277,8 +277,9 @@ const Products = () => {
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex justify-center items-center space-x-4"
+                  className="flex justify-center items-center space-x-2 sm:space-x-4"
                 >
+                  {/* Previous Button */}
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
@@ -292,61 +293,97 @@ const Products = () => {
                         : "text-primary hover:bg-primary/10 cursor-pointer"
                     }`}
                   >
-                    <ChevronLeft size={24} />
+                    <ChevronLeft size={20} className="sm:size-6" />
                   </motion.button>
 
-                  <div className="flex items-center space-x-2">
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => goToPage(1)}
-                      className={`w-10 h-10 rounded-full font-semibold ${
-                        pagination.currentPage === 1
-                          ? "bg-secondary text-background"
-                          : "text-primary hover:bg-primary/10"
-                      }`}
-                    >
-                      1
-                    </motion.button>
-
-                    {pagination.currentPage > 3 &&
-                      pagination.totalPages > 4 && (
-                        <span className="text-primary/60 px-1">…</span>
-                      )}
-
-                    {pagination.currentPage > 1 &&
-                      pagination.currentPage < pagination.totalPages && (
+                  {/* Page Numbers - Smart Display */}
+                  <div className="flex items-center space-x-1 sm:space-x-2">
+                    {/* Always show page 1 */}
+                    {pagination.currentPage > 2 && (
+                      <>
                         <motion.button
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
-                          onClick={() => goToPage(pagination.currentPage)}
-                          className="w-10 h-10 rounded-full font-semibold bg-secondary text-background"
+                          onClick={() => goToPage(1)}
+                          className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full font-semibold text-sm sm:text-base ${
+                            pagination.currentPage === 1
+                              ? "bg-secondary text-background"
+                              : "text-primary hover:bg-primary/10"
+                          }`}
                         >
-                          {pagination.currentPage}
+                          1
                         </motion.button>
-                      )}
+                        {pagination.currentPage > 3 && (
+                          <span className="text-primary/60 px-1">…</span>
+                        )}
+                      </>
+                    )}
 
-                    {pagination.currentPage < pagination.totalPages - 2 &&
-                      pagination.totalPages > 4 && (
-                        <span className="text-primary/60 px-1">…</span>
-                      )}
-
-                    {pagination.totalPages > 1 && (
+                    {/* Show previous page if current > 1 */}
+                    {pagination.currentPage > 1 && (
                       <motion.button
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
-                        onClick={() => goToPage(pagination.totalPages)}
-                        className={`w-10 h-10 rounded-full font-semibold ${
-                          pagination.currentPage === pagination.totalPages
+                        onClick={() => goToPage(pagination.currentPage - 1)}
+                        className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full font-semibold text-sm sm:text-base ${
+                          pagination.currentPage === pagination.currentPage - 1
                             ? "bg-secondary text-background"
                             : "text-primary hover:bg-primary/10"
                         }`}
                       >
-                        {pagination.totalPages}
+                        {pagination.currentPage - 1}
                       </motion.button>
+                    )}
+
+                    {/* Current Page - Always visible and highlighted */}
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => goToPage(pagination.currentPage)}
+                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-full font-semibold bg-secondary text-background text-sm sm:text-base"
+                    >
+                      {pagination.currentPage}
+                    </motion.button>
+
+                    {/* Show next page if not last page */}
+                    {pagination.currentPage < pagination.totalPages && (
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => goToPage(pagination.currentPage + 1)}
+                        className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full font-semibold text-sm sm:text-base ${
+                          pagination.currentPage === pagination.currentPage + 1
+                            ? "bg-secondary text-background"
+                            : "text-primary hover:bg-primary/10"
+                        }`}
+                      >
+                        {pagination.currentPage + 1}
+                      </motion.button>
+                    )}
+
+                    {/* Last page with dots if needed */}
+                    {pagination.currentPage < pagination.totalPages - 1 && (
+                      <>
+                        {pagination.currentPage < pagination.totalPages - 2 && (
+                          <span className="text-primary/60 px-1">…</span>
+                        )}
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => goToPage(pagination.totalPages)}
+                          className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full font-semibold text-sm sm:text-base ${
+                            pagination.currentPage === pagination.totalPages
+                              ? "bg-secondary text-background"
+                              : "text-primary hover:bg-primary/10"
+                          }`}
+                        >
+                          {pagination.totalPages}
+                        </motion.button>
+                      </>
                     )}
                   </div>
 
+                  {/* Next Button */}
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
@@ -365,17 +402,17 @@ const Products = () => {
                         : "text-primary hover:bg-primary/10 cursor-pointer"
                     }`}
                   >
-                    <ChevronRight size={24} />
+                    <ChevronRight size={20} className="sm:size-6" />
                   </motion.button>
                 </motion.div>
 
-                {/* Page Indicator - Always at the bottom */}
+                {/* Page Indicator - Clear and centered */}
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className="mt-4 text-center"
                 >
-                  <span className="text-primary/60 text-sm">
+                  <span className="text-primary/70 text-sm font-medium">
                     Page {pagination.currentPage} sur {pagination.totalPages}
                   </span>
                 </motion.div>
