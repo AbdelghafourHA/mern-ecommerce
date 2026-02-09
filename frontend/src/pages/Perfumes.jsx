@@ -16,7 +16,6 @@ import { useCartStore } from "../stores/useCartStore";
 
 const Parfums = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-
   const {
     products,
     getProductsByCategory,
@@ -28,7 +27,11 @@ const Parfums = () => {
     setPage,
   } = useProductStore();
 
-  // جلب منتجات Parfums عند تغيير الفلاتر أو الصفحة
+  const goToPage = (page) => {
+    setPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   useEffect(() => {
     getProductsByCategory("Parfums");
   }, [filters, pagination.currentPage, getProductsByCategory]);
@@ -37,10 +40,9 @@ const Parfums = () => {
     setFilter("gender", "all");
     setFilter("maxPrice", null);
     setFilter("sort", "newest");
-    setPage(1);
+    goToPage(1);
   }, []);
 
-  // دالة لحساب السعر النهائي
   const calculateFinalPrice = (product) => {
     return product.discount > 0
       ? product.newPrice > 0
@@ -49,7 +51,6 @@ const Parfums = () => {
       : product.price;
   };
 
-  // تصحيح حساب الـ genders مع دعم المصفوفة
   const genders = [
     {
       id: "all",
@@ -73,12 +74,11 @@ const Parfums = () => {
     return `${price.toLocaleString("fr-FR")} DA`;
   };
 
-  // إعادة تعيين الفلاتر
   const resetFilters = () => {
     setFilter("gender", "all");
     setFilter("maxPrice", null);
     setFilter("sort", "newest");
-    setPage(1);
+    goToPage(1);
   };
 
   const containerVariants = {
@@ -134,7 +134,7 @@ const Parfums = () => {
               whileTap={{ scale: 0.95 }}
               onClick={() => {
                 setFilter("gender", gender.id === "all" ? "all" : gender.id);
-                setPage(1);
+                goToPage(1);
               }}
               className={`cursor-pointer px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold transition-all duration-300 border flex items-center space-x-2 text-sm sm:text-base ${
                 filters.gender === gender.id
@@ -258,7 +258,7 @@ const Parfums = () => {
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() =>
-                    setPage(Math.max(1, pagination.currentPage - 1))
+                    goToPage(Math.max(1, pagination.currentPage - 1))
                   }
                   disabled={pagination.currentPage === 1}
                   className={`p-2 rounded-full ${
@@ -271,39 +271,38 @@ const Parfums = () => {
                 </motion.button>
 
                 <div className="flex items-center space-x-2">
-                  {Array.from(
-                    { length: Math.min(5, pagination.totalPages) },
-                    (_, i) => {
-                      let pageNumber;
-                      if (pagination.totalPages <= 5) {
-                        pageNumber = i + 1;
-                      } else if (pagination.currentPage <= 3) {
-                        pageNumber = i + 1;
-                      } else if (
-                        pagination.currentPage >=
-                        pagination.totalPages - 2
-                      ) {
-                        pageNumber = pagination.totalPages - 4 + i;
-                      } else {
-                        pageNumber = pagination.currentPage - 2 + i;
-                      }
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => goToPage(1)}
+                    className={`w-10 h-10 rounded-full font-semibold ${
+                      pagination.currentPage === 1
+                        ? "bg-secondary text-background"
+                        : "text-primary hover:bg-primary/10"
+                    }`}
+                  >
+                    1
+                  </motion.button>
 
-                      return pageNumber <= pagination.totalPages ? (
-                        <motion.button
-                          key={pageNumber}
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => setPage(pageNumber)}
-                          className={`w-10 h-10 rounded-full font-semibold transition-all duration-300 ${
-                            pagination.currentPage === pageNumber
-                              ? "bg-secondary text-background"
-                              : "text-primary hover:bg-primary/10"
-                          }`}
-                        >
-                          {pageNumber}
-                        </motion.button>
-                      ) : null;
-                    }
+                  {/* Dots */}
+                  {pagination.totalPages > 2 && pagination.currentPage > 2 && (
+                    <span className="text-primary/60 px-1">…</span>
+                  )}
+
+                  {/* Last */}
+                  {pagination.totalPages > 1 && (
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => goToPage(pagination.totalPages)}
+                      className={`w-10 h-10 rounded-full font-semibold ${
+                        pagination.currentPage === pagination.totalPages
+                          ? "bg-secondary text-background"
+                          : "text-primary hover:bg-primary/10"
+                      }`}
+                    >
+                      {pagination.totalPages}
+                    </motion.button>
                   )}
                 </div>
 
@@ -311,7 +310,7 @@ const Parfums = () => {
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() =>
-                    setPage(
+                    goToPage(
                       Math.min(
                         pagination.totalPages,
                         pagination.currentPage + 1

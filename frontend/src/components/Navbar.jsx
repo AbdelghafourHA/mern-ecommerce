@@ -56,7 +56,7 @@ const Navbar = () => {
       type: "dropdown",
       items: [
         { name: "Parfums", link: "category/perfumes" },
-        { name: "Decants", link: "category/perfumes/decants" },
+        { name: "Decants (التقسيمات)", link: "category/perfumes/decants" },
       ],
     },
     {
@@ -65,7 +65,7 @@ const Navbar = () => {
       link: "category/cosmetics",
     },
     {
-      name: "Cadeaux",
+      name: "Cadeaux Et Coffrets",
       type: "link",
       link: "category/gifts",
     },
@@ -199,7 +199,7 @@ const Navbar = () => {
                                   <Link
                                     key={subItem.name}
                                     to={`/${subItem.link}`}
-                                    className="block px-4 py-3 text-primary hover:bg-secondary/10 hover:text-secondary transition-colors"
+                                    className="block font-bold px-4 py-3 text-primary hover:bg-secondary/10 hover:text-secondary transition-colors"
                                   >
                                     {subItem.name}
                                   </Link>
@@ -239,7 +239,7 @@ const Navbar = () => {
               </Link>
 
               {/* Dashboard */}
-              <Link to="/admin">
+              {/* <Link to="/admin">
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
@@ -247,7 +247,7 @@ const Navbar = () => {
                 >
                   <LayoutDashboard size={22} />
                 </motion.button>
-              </Link>
+              </Link> */}
 
               {/* Cart */}
               <motion.button
@@ -348,7 +348,7 @@ const Navbar = () => {
                         className="w-full text-start text-xl font-medium text-primary/80 hover:text-secondary transition-colors py-3 px-8 rounded-lg hover:bg-secondary/5 flex items-center"
                       >
                         <span className="ml-2">•</span>
-                        <span className="ml-2">Decants</span>
+                        <span className="ml-2">Decants - التقسيمات </span>
                       </Link>
                     </div>
                   </motion.li>

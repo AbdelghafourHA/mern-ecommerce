@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import Home from "./pages/Home.jsx";
 import Navbar from "./components/Navbar.jsx";
 import Products from "./pages/Products.jsx";
@@ -21,6 +21,8 @@ import ScrollProgressBar from "./components/ScrollProgressBar .jsx";
 import Decants from "./pages/Decants.jsx";
 
 const App = () => {
+  const location = useLocation();
+  const isAdminPage = location.pathname.startsWith("/admin");
   const { user, checkAuth, checkingAuth } = useAdminStore();
 
   useEffect(() => {
@@ -35,8 +37,8 @@ const App = () => {
 
   return (
     <CartProvider>
-      <Navbar />
-      <Cart />
+      {!isAdminPage && <Navbar />}
+      {!isAdminPage && <Cart />}
       <ScrollToTopButton />
       <ScrollProgressBar />
       <ScrollToTop />

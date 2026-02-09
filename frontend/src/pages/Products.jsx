@@ -40,12 +40,10 @@ const Products = () => {
     setPage(1);
   }, []);
 
-  // جلب المنتجات عند تغيير الفلاتر أو الصفحة
   useEffect(() => {
     getAllProducts();
   }, [filters, pagination.currentPage, getAllProducts]);
 
-  // دالة لحساب السعر النهائي
   const calculateFinalPrice = (product) => {
     return product.discount > 0
       ? product.newPrice > 0
@@ -54,7 +52,6 @@ const Products = () => {
       : product.price;
   };
 
-  // الفئات من الـ store
   const categories = [
     {
       id: "all",
@@ -68,7 +65,6 @@ const Products = () => {
     })) || []),
   ];
 
-  // تصحيح حساب الـ genders مع دعم المصفوفة
   const genders = [
     {
       id: "all",
@@ -109,7 +105,6 @@ const Products = () => {
     },
   };
 
-  // معالجة تغيير الفئة
   const handleCategoryChange = (categoryId) => {
     if (categoryId === "all") {
       setFilter("category", "all");
@@ -117,6 +112,11 @@ const Products = () => {
       setFilter("category", categoryId);
     }
     setPage(1);
+  };
+
+  const goToPage = (page) => {
+    setPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
@@ -281,7 +281,7 @@ const Products = () => {
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() =>
-                    setPage(Math.max(1, pagination.currentPage - 1))
+                    goToPage(Math.max(1, pagination.currentPage - 1))
                   }
                   disabled={pagination.currentPage === 1}
                   className={`p-2 rounded-full ${
@@ -294,39 +294,38 @@ const Products = () => {
                 </motion.button>
 
                 <div className="flex items-center space-x-2">
-                  {Array.from(
-                    { length: Math.min(5, pagination.totalPages) },
-                    (_, i) => {
-                      let pageNumber;
-                      if (pagination.totalPages <= 5) {
-                        pageNumber = i + 1;
-                      } else if (pagination.currentPage <= 3) {
-                        pageNumber = i + 1;
-                      } else if (
-                        pagination.currentPage >=
-                        pagination.totalPages - 2
-                      ) {
-                        pageNumber = pagination.totalPages - 4 + i;
-                      } else {
-                        pageNumber = pagination.currentPage - 2 + i;
-                      }
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => goToPage(1)}
+                    className={`w-10 h-10 rounded-full font-semibold ${
+                      pagination.currentPage === 1
+                        ? "bg-secondary text-background"
+                        : "text-primary hover:bg-primary/10"
+                    }`}
+                  >
+                    1
+                  </motion.button>
 
-                      return pageNumber <= pagination.totalPages ? (
-                        <motion.button
-                          key={pageNumber}
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => setPage(pageNumber)}
-                          className={`w-10 h-10 rounded-full font-semibold transition-all duration-300 ${
-                            pagination.currentPage === pageNumber
-                              ? "bg-secondary text-background"
-                              : "text-primary hover:bg-primary/10"
-                          }`}
-                        >
-                          {pageNumber}
-                        </motion.button>
-                      ) : null;
-                    }
+                  {/* Dots */}
+                  {pagination.totalPages > 2 && pagination.currentPage > 2 && (
+                    <span className="text-primary/60 px-1">…</span>
+                  )}
+
+                  {/* Last page */}
+                  {pagination.totalPages > 1 && (
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => goToPage(pagination.totalPages)}
+                      className={`w-10 h-10 rounded-full font-semibold ${
+                        pagination.currentPage === pagination.totalPages
+                          ? "bg-secondary text-background"
+                          : "text-primary hover:bg-primary/10"
+                      }`}
+                    >
+                      {pagination.totalPages}
+                    </motion.button>
                   )}
                 </div>
 
@@ -334,7 +333,7 @@ const Products = () => {
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() =>
-                    setPage(
+                    goToPage(
                       Math.min(
                         pagination.totalPages,
                         pagination.currentPage + 1
