@@ -211,7 +211,7 @@ const ProductsManager = ({ formatPrice }) => {
   const [applyingBulkDiscount, setApplyingBulkDiscount] = useState(false);
   const [isBulkDiscountOpen, setIsBulkDiscountOpen] = useState(false);
   const searchTimeout = useRef(null);
-  const [productDiscounts, setProductDiscounts] = useState({});
+  const [productReductions, setProductReductions] = useState({});
 
   const {
     products,
@@ -241,20 +241,6 @@ const ProductsManager = ({ formatPrice }) => {
     filters.sort,
   ]);
 
-  // تحديث تخفيضات المنتجات عند التحميل
-  useEffect(() => {
-    if (products.length > 0) {
-      const discounts = {};
-      products.forEach((product) => {
-        discounts[product._id] = {
-          discount: product.discount || 0,
-          priceReduction: product.priceReduction || 0,
-        };
-      });
-      setProductDiscounts(discounts);
-    }
-  }, [products]);
-
   const handleSearch = (e) => {
     const value = e.target.value;
 
@@ -275,68 +261,65 @@ const ProductsManager = ({ formatPrice }) => {
     ...new Set(products.map((p) => p.category).filter(Boolean)),
   ];
 
-  const handlePriceReductionChange = async (productId, priceReduction) => {
+  const handleApplyPriceReduction = async (productId, priceReduction) => {
     try {
-      // تحديث الحالة المحلية أولاً
-      setProductDiscounts((prev) => ({
-        ...prev,
-        [productId]: {
-          ...prev[productId],
-          priceReduction: priceReduction,
-          discount: 0, // إزالة التخفيض بالنسبة عند استخدام تخفيض بالسعر
-        },
-      }));
+      if (!priceReduction || priceReduction <= 0) {
+        toast.error("Veuillez entrer un montant valide");
+        return;
+      }
 
-      const product = products.find((p) => p._id === productId);
+      const product = products.find(p => p._id === productId);
       if (product) {
-        await updateProduct(productId, {
+        await updateProduct(productId, { 
           ...product,
           priceReduction: priceReduction,
-          discount: 0,
+          discount: 0
         });
+        
+        // تحديث الحالة المحلية فقط لهذا المنتج
+        setProductReductions(prev => ({
+          ...prev,
+          [productId]: priceReduction
+        }));
+        
+        toast.success(`Réduction de ${formatPrice(priceReduction)} appliquée!`);
       }
     } catch (error) {
-      console.error("Error updating price reduction:", error);
-      // التراجع عن التحديث في حالة الخطأ
-      const product = products.find((p) => p._id === productId);
+      console.error("Error applying price reduction:", error);
+      toast.error("Erreur lors de l'application de la réduction");
+    }
+  };
+
+  const handleRemovePriceReduction = async (productId) => {
+    try {
+      const product = products.find(p => p._id === productId);
       if (product) {
-        setProductDiscounts((prev) => ({
-          ...prev,
-          [productId]: {
-            discount: product.discount || 0,
-            priceReduction: product.priceReduction || 0,
-          },
-        }));
+        await updateProduct(productId, { 
+          ...product,
+          priceReduction: 0,
+          discount: product.discount || 0
+        });
+        
+        // إزالة من الحالة المحلية
+        setProductReductions(prev => {
+          const newReductions = { ...prev };
+          delete newReductions[productId];
+          return newReductions;
+        });
+        
+        toast.success("Réduction supprimée!");
       }
+    } catch (error) {
+      console.error("Error removing price reduction:", error);
+      toast.error("Erreur lors de la suppression de la réduction");
     }
   };
 
   const handleDiscountChange = async (productId, newDiscount) => {
     try {
-      // تحديث الحالة المحلية أولاً
-      setProductDiscounts((prev) => ({
-        ...prev,
-        [productId]: {
-          ...prev[productId],
-          discount: newDiscount,
-          priceReduction: 0, // إزالة تخفيض السعر عند استخدام تخفيض بالنسبة
-        },
-      }));
-
       await productDiscount(productId, newDiscount);
     } catch (error) {
       console.error("Error updating discount:", error);
-      // التراجع عن التحديث في حالة الخطأ
-      const product = products.find((p) => p._id === productId);
-      if (product) {
-        setProductDiscounts((prev) => ({
-          ...prev,
-          [productId]: {
-            discount: product.discount || 0,
-            priceReduction: product.priceReduction || 0,
-          },
-        }));
-      }
     }
   };
 
@@ -370,20 +353,14 @@ const ProductsManager = ({ formatPrice }) => {
   const getFinalPrice = (product) => {
     const displayPrice = getDisplayPrice(product);
 
-    // استخدام القيم من الحالة المحلية
-    const productDiscount = productDiscounts[product._id] || {
-      discount: 0,
-      priceReduction: 0,
-    };
-
-    // 1. أولوية لتخفيض السعر إذا كان موجوداً
-    if (productDiscount.priceReduction && productDiscount.priceReduction > 0) {
-      return Math.max(0, displayPrice - productDiscount.priceReduction);
+    // أولوية لتخفيض السعر إذا كان موجوداً
+    if (product.priceReduction && product.priceReduction > 0) {
+      return Math.max(0, displayPrice - product.priceReduction);
     }
 
-    // 2. إذا لم يكن هناك تخفيض بالسعر، نحسب بالتخفيض بالنسبة
-    if (productDiscount.discount > 0) {
-      return Math.round(displayPrice * (1 - productDiscount.discount / 100));
+    // إذا لم يكن هناك تخفيض بالسعر، نحسب بالتخفيض بالنسبة
+    if (product.discount > 0) {
+      return Math.round(displayPrice * (1 - product.discount / 100));
     }
 
     return displayPrice;
@@ -404,19 +381,6 @@ const ProductsManager = ({ formatPrice }) => {
     try {
       const categories = bulkDiscount.applyToAll ? [] : bulkDiscount.categories;
       await applyDiscountToAll(bulkDiscount.discount, categories);
-
-      // تحديث الحالة المحلية بعد التخفيض الجماعي
-      const newDiscounts = { ...productDiscounts };
-      products.forEach((product) => {
-        if (bulkDiscount.applyToAll || categories.includes(product.category)) {
-          newDiscounts[product._id] = {
-            discount: bulkDiscount.discount,
-            priceReduction: 0, // إزالة أي تخفيض بالسعر
-          };
-        }
-      });
-      setProductDiscounts(newDiscounts);
-
       toast.success(
         `Discount de ${bulkDiscount.discount}% appliqué avec succès!`
       );
@@ -437,19 +401,6 @@ const ProductsManager = ({ formatPrice }) => {
     try {
       const categories = bulkDiscount.applyToAll ? [] : bulkDiscount.categories;
       await removeDiscountFromAll(categories);
-
-      // تحديث الحالة المحلية بعد إزالة التخفيضات
-      const newDiscounts = { ...productDiscounts };
-      products.forEach((product) => {
-        if (bulkDiscount.applyToAll || categories.includes(product.category)) {
-          newDiscounts[product._id] = {
-            discount: 0,
-            priceReduction: 0,
-          };
-        }
-      });
-      setProductDiscounts(newDiscounts);
-
       toast.success("Tous les discounts ont été supprimés avec succès!");
     } catch (error) {
       toast.error("Erreur lors de la suppression des discounts");
@@ -465,10 +416,6 @@ const ProductsManager = ({ formatPrice }) => {
 
     try {
       await deleteProduct(productId);
-      // إزالة من الحالة المحلية
-      const newDiscounts = { ...productDiscounts };
-      delete newDiscounts[productId];
-      setProductDiscounts(newDiscounts);
     } catch (error) {
       console.error("Error deleting product:", error);
     }
@@ -743,7 +690,7 @@ const ProductsManager = ({ formatPrice }) => {
                         Prix Original
                       </th>
                       <th className="text-left py-3 px-4 text-primary font-bold01 text-sm">
-                        Réduction Produit (DA)
+                        Réduction Produit
                       </th>
                       <th className="text-left py-3 px-4 text-primary font-bold01 text-sm">
                         Prix Final
@@ -756,12 +703,9 @@ const ProductsManager = ({ formatPrice }) => {
                   <tbody>
                     {products.map((product) => {
                       const displayPrice = getDisplayPrice(product);
-                      const productDiscount = productDiscounts[product._id] || {
-                        discount: 0,
-                        priceReduction: 0,
-                      };
                       const finalPrice = getFinalPrice(product);
                       const savings = displayPrice - finalPrice;
+                      const temporaryReduction = productReductions[product._id] || "";
 
                       return (
                         <tr
@@ -820,43 +764,71 @@ const ProductsManager = ({ formatPrice }) => {
                             </div>
                           </td>
                           <td className="py-3 px-4">
-                            <div className="space-y-2">
-                              {/* حقل التخفيض الجماعي يظهر فقط إذا تم تطبيقه */}
-                              {productDiscount.discount > 0 && (
+                            <div className="space-y-3">
+                              {/* إذا كان هناك تخفيض جماعي يظهر كقراءة فقط */}
+                              {product.discount > 0 && (
                                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
                                   <div className="text-xs text-yellow-700 font-bold01">
-                                    Discount global: {productDiscount.discount}%
+                                    Discount global: {product.discount}%
                                   </div>
-                                  <button
-                                    onClick={() =>
-                                      handleDiscountChange(product._id, 0)
-                                    }
-                                    className="text-xs text-red-600 hover:text-red-800 mt-1"
-                                  >
-                                    Supprimer
-                                  </button>
                                 </div>
                               )}
-
-                              {/* حقل تخفيض السعر للمنتج الفردي */}
-                              <div className="flex items-center space-x-2">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max={displayPrice}
-                                  value={productDiscount.priceReduction || ""}
-                                  placeholder="Montant en DA"
-                                  onChange={(e) =>
-                                    handlePriceReductionChange(
-                                      product._id,
-                                      parseInt(e.target.value) || 0
-                                    )
-                                  }
-                                  className="w-28 p-2 border border-primary/20 rounded-lg text-center text-sm focus:outline-none focus:border-secondary"
-                                />
-                                <span className="text-primary/60 text-sm">
-                                  DA
-                                </span>
+                              
+                              {/* حقل إدخال للسعر الجديد مع زر تطبيق */}
+                              <div className="space-y-2">
+                                <div className="flex items-center space-x-2">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max={displayPrice}
+                                    value={temporaryReduction}
+                                    placeholder="Montant en DA"
+                                    onChange={(e) => {
+                                      const value = parseInt(e.target.value) || "";
+                                      setProductReductions(prev => ({
+                                        ...prev,
+                                        [product._id]: value
+                                      }));
+                                    }}
+                                    className="w-32 p-2 border border-primary/20 rounded-lg text-center text-sm focus:outline-none focus:border-secondary"
+                                  />
+                                  <span className="text-primary/60 text-sm">DA</span>
+                                </div>
+                                
+                                <div className="flex items-center space-x-2">
+                                  {product.priceReduction > 0 ? (
+                                    <>
+                                      <button
+                                        onClick={() => handleApplyPriceReduction(product._id, temporaryReduction)}
+                                        disabled={!temporaryReduction || temporaryReduction <= 0}
+                                        className="flex-1 bg-blue-600 text-white py-1 px-3 rounded-lg text-xs font-bold01 hover:bg-blue-700 transition-all duration-300 disabled:opacity-50"
+                                      >
+                                        Mettre à jour
+                                      </button>
+                                      <button
+                                        onClick={() => handleRemovePriceReduction(product._id)}
+                                        className="flex-1 bg-red-600 text-white py-1 px-3 rounded-lg text-xs font-bold01 hover:bg-red-700 transition-all duration-300"
+                                      >
+                                        Supprimer
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleApplyPriceReduction(product._id, temporaryReduction)}
+                                      disabled={!temporaryReduction || temporaryReduction <= 0}
+                                      className="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-bold01 hover:bg-green-700 transition-all duration-300 disabled:opacity-50"
+                                    >
+                                      Appliquer
+                                    </button>
+                                  )}
+                                </div>
+                                
+                                {/* عرض التخفيض الحالي */}
+                                {product.priceReduction > 0 && (
+                                  <div className="text-xs text-green-600 font-bold01">
+                                    Réduction actuelle: {formatPrice(product.priceReduction)}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </td>
@@ -864,8 +836,7 @@ const ProductsManager = ({ formatPrice }) => {
                             <div className="space-y-1">
                               <div
                                 className={`font-semibold font-p01 text-lg ${
-                                  productDiscount.discount > 0 ||
-                                  productDiscount.priceReduction > 0
+                                  (product.discount > 0 || product.priceReduction > 0) 
                                     ? "text-green-600"
                                     : "text-primary"
                                 }`}
@@ -877,20 +848,14 @@ const ProductsManager = ({ formatPrice }) => {
                                   <div className="text-xs text-red-600 font-p01">
                                     Économie: {formatPrice(savings)}
                                   </div>
-                                  {productDiscount.priceReduction > 0 ? (
+                                  {product.priceReduction > 0 ? (
                                     <div className="text-xs text-blue-600 font-p01">
-                                      (Réduction:{" "}
-                                      {formatPrice(
-                                        productDiscount.priceReduction
-                                      )}
-                                      )
+                                      (Réduction: {formatPrice(product.priceReduction)})
                                     </div>
-                                  ) : (
-                                    productDiscount.discount > 0 && (
-                                      <div className="text-xs text-yellow-600 font-p01">
-                                        (Discount: {productDiscount.discount}%)
-                                      </div>
-                                    )
+                                  ) : product.discount > 0 && (
+                                    <div className="text-xs text-yellow-600 font-p01">
+                                      (Discount: {product.discount}%)
+                                    </div>
                                   )}
                                 </div>
                               )}
@@ -974,12 +939,9 @@ const ProductsManager = ({ formatPrice }) => {
               ) : (
                 products.map((product) => {
                   const displayPrice = getDisplayPrice(product);
-                  const productDiscount = productDiscounts[product._id] || {
-                    discount: 0,
-                    priceReduction: 0,
-                  };
                   const finalPrice = getFinalPrice(product);
                   const savings = displayPrice - finalPrice;
+                  const temporaryReduction = productReductions[product._id] || "";
 
                   return (
                     <div
@@ -1045,8 +1007,7 @@ const ProductsManager = ({ formatPrice }) => {
                           </p>
                           <p
                             className={`font-semibold text-lg ${
-                              productDiscount.discount > 0 ||
-                              productDiscount.priceReduction > 0
+                              (product.discount > 0 || product.priceReduction > 0)
                                 ? "text-green-600"
                                 : "text-primary"
                             }`}
@@ -1063,43 +1024,73 @@ const ProductsManager = ({ formatPrice }) => {
 
                       <div className="mb-3">
                         {/* عرض التخفيض الجماعي إذا تم تطبيقه */}
-                        {productDiscount.discount > 0 && (
+                        {product.discount > 0 && (
                           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mb-2">
                             <div className="text-xs text-yellow-700 font-bold01">
-                              Discount global: {productDiscount.discount}%
+                              Discount global: {product.discount}%
                             </div>
-                            <button
-                              onClick={() =>
-                                handleDiscountChange(product._id, 0)
-                              }
-                              className="text-xs text-red-600 hover:text-red-800 mt-1"
-                            >
-                              Supprimer
-                            </button>
                           </div>
                         )}
-
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-primary/60 text-xs">
-                            Réduction DA:
-                          </span>
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="number"
-                              min="0"
-                              max={displayPrice}
-                              value={productDiscount.priceReduction || ""}
-                              placeholder="Montant"
-                              onChange={(e) =>
-                                handlePriceReductionChange(
-                                  product._id,
-                                  parseInt(e.target.value) || 0
-                                )
-                              }
-                              className="w-24 p-2 border border-primary/20 rounded text-center text-xs focus:outline-none focus:border-secondary"
-                            />
-                            <span className="text-primary/60 text-xs">DA</span>
+                        
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-primary/60 text-xs">
+                              Réduction DA:
+                            </span>
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="number"
+                                min="0"
+                                max={displayPrice}
+                                value={temporaryReduction}
+                                placeholder="Montant"
+                                onChange={(e) => {
+                                  const value = parseInt(e.target.value) || "";
+                                  setProductReductions(prev => ({
+                                    ...prev,
+                                    [product._id]: value
+                                  }));
+                                }}
+                                className="w-24 p-2 border border-primary/20 rounded text-center text-xs focus:outline-none focus:border-secondary"
+                              />
+                              <span className="text-primary/60 text-xs">DA</span>
+                            </div>
                           </div>
+                          
+                          <div className="flex items-center space-x-2">
+                            {product.priceReduction > 0 ? (
+                              <>
+                                <button
+                                  onClick={() => handleApplyPriceReduction(product._id, temporaryReduction)}
+                                  disabled={!temporaryReduction || temporaryReduction <= 0}
+                                  className="flex-1 bg-blue-600 text-white py-1 px-2 rounded-lg text-xs font-bold01 hover:bg-blue-700 transition-all duration-300 disabled:opacity-50"
+                                >
+                                  Mettre à jour
+                                </button>
+                                <button
+                                  onClick={() => handleRemovePriceReduction(product._id)}
+                                  className="flex-1 bg-red-600 text-white py-1 px-2 rounded-lg text-xs font-bold01 hover:bg-red-700 transition-all duration-300"
+                                >
+                                  Supprimer
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => handleApplyPriceReduction(product._id, temporaryReduction)}
+                                disabled={!temporaryReduction || temporaryReduction <= 0}
+                                className="w-full bg-green-600 text-white py-2 rounded-lg text-xs font-bold01 hover:bg-green-700 transition-all duration-300 disabled:opacity-50"
+                              >
+                                Appliquer la réduction
+                              </button>
+                            )}
+                          </div>
+                          
+                          {/* عرض التخفيض الحالي */}
+                          {product.priceReduction > 0 && (
+                            <div className="text-xs text-green-600 text-center font-bold01">
+                              Réduction actuelle: {formatPrice(product.priceReduction)}
+                            </div>
+                          )}
                         </div>
                       </div>
 
