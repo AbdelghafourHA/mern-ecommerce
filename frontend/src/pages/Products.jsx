@@ -294,35 +294,28 @@ const Products = () => {
                 </motion.button>
 
                 <div className="flex items-center space-x-2">
+                  {/* Current page first */}
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
-                    onClick={() => goToPage(1)}
-                    className={`w-10 h-10 rounded-full font-semibold ${
-                      pagination.currentPage === 1
-                        ? "bg-secondary text-background"
-                        : "text-primary hover:bg-primary/10"
-                    }`}
+                    onClick={() => goToPage(pagination.currentPage)}
+                    className="w-10 h-10 rounded-full font-semibold bg-secondary text-background"
                   >
-                    1
+                    {pagination.currentPage}
                   </motion.button>
 
-                  {/* Dots */}
-                  {pagination.totalPages > 2 && pagination.currentPage > 2 && (
+                  {/* Dots if not last page */}
+                  {pagination.currentPage < pagination.totalPages - 1 && (
                     <span className="text-primary/60 px-1">…</span>
                   )}
 
                   {/* Last page */}
-                  {pagination.totalPages > 1 && (
+                  {pagination.currentPage !== pagination.totalPages && (
                     <motion.button
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={() => goToPage(pagination.totalPages)}
-                      className={`w-10 h-10 rounded-full font-semibold ${
-                        pagination.currentPage === pagination.totalPages
-                          ? "bg-secondary text-background"
-                          : "text-primary hover:bg-primary/10"
-                      }`}
+                      className="w-10 h-10 rounded-full font-semibold text-primary hover:bg-primary/10"
                     >
                       {pagination.totalPages}
                     </motion.button>
