@@ -272,14 +272,13 @@ const Products = () => {
 
             {/* Pagination - Only show if more than 10 products */}
             {pagination.totalPages > 1 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex flex-col items-center mt-12 space-y-4"
-              >
+              <div className="mt-12">
                 {/* Pagination Controls */}
-                <div className="flex justify-center items-center space-x-4">
-                  {/* Previous Button */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex justify-center items-center space-x-4"
+                >
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
@@ -296,9 +295,7 @@ const Products = () => {
                     <ChevronLeft size={24} />
                   </motion.button>
 
-                  {/* Page Numbers */}
                   <div className="flex items-center space-x-2">
-                    {/* Always show page 1 */}
                     <motion.button
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
@@ -312,13 +309,11 @@ const Products = () => {
                       1
                     </motion.button>
 
-                    {/* Show dots if current page > 3 */}
                     {pagination.currentPage > 3 &&
                       pagination.totalPages > 4 && (
                         <span className="text-primary/60 px-1">…</span>
                       )}
 
-                    {/* Show current page if not page 1 or last page */}
                     {pagination.currentPage > 1 &&
                       pagination.currentPage < pagination.totalPages && (
                         <motion.button
@@ -331,13 +326,11 @@ const Products = () => {
                         </motion.button>
                       )}
 
-                    {/* Show dots if current page is far from last page */}
                     {pagination.currentPage < pagination.totalPages - 2 &&
                       pagination.totalPages > 4 && (
                         <span className="text-primary/60 px-1">…</span>
                       )}
 
-                    {/* Show last page if more than 1 page */}
                     {pagination.totalPages > 1 && (
                       <motion.button
                         whileHover={{ scale: 1.1 }}
@@ -354,7 +347,6 @@ const Products = () => {
                     )}
                   </div>
 
-                  {/* Next Button */}
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
@@ -375,13 +367,19 @@ const Products = () => {
                   >
                     <ChevronRight size={24} />
                   </motion.button>
-                </div>
+                </motion.div>
 
-                {/* Current page indicator - Below on mobile, beside on desktop */}
-                <span className="text-primary/60 text-sm md:ml-4 md:absolute md:right-0">
-                  Page {pagination.currentPage} sur {pagination.totalPages}
-                </span>
-              </motion.div>
+                {/* Page Indicator - Always at the bottom */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="mt-4 text-center"
+                >
+                  <span className="text-primary/60 text-sm">
+                    Page {pagination.currentPage} sur {pagination.totalPages}
+                  </span>
+                </motion.div>
+              </div>
             )}
           </>
         )}
