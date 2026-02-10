@@ -211,7 +211,7 @@ const ProductsManager = ({ formatPrice }) => {
   const [applyingBulkDiscount, setApplyingBulkDiscount] = useState(false);
   const [isBulkDiscountOpen, setIsBulkDiscountOpen] = useState(false);
   const searchTimeout = useRef(null);
-  const [productReductions, setProductReductions] = useState({});
+  const [temporaryReductions, setTemporaryReductions] = useState({});
 
   const {
     products,
@@ -241,6 +241,16 @@ const ProductsManager = ({ formatPrice }) => {
     filters.sort,
   ]);
 
+  useEffect(() => {
+    if (products.length > 0) {
+      const reductions = {};
+      products.forEach((product) => {
+        reductions[product._id] = product.priceReduction || 0;
+      });
+      setTemporaryReductions(reductions);
+    }
+  }, [products]);
+
   const handleSearch = (e) => {
     const value = e.target.value;
 
@@ -261,57 +271,57 @@ const ProductsManager = ({ formatPrice }) => {
     ...new Set(products.map((p) => p.category).filter(Boolean)),
   ];
 
-  const handleApplyPriceReduction = async (productId, priceReduction) => {
+  const handlePriceReductionChange = async (productId, priceReduction) => {
     try {
-      if (!priceReduction || priceReduction <= 0) {
-        toast.error("Veuillez entrer un montant valide");
-        return;
-      }
+      // قيمة 0 تعني إزالة التخفيض
+      const isRemoving = priceReduction === 0;
 
-      const product = products.find(p => p._id === productId);
+      const product = products.find((p) => p._id === productId);
       if (product) {
-        await updateProduct(productId, { 
+        // تحديث الحالة المحلية أولاً
+        setTemporaryReductions((prev) => ({
+          ...prev,
+          [productId]: priceReduction,
+        }));
+
+        // إعداد البيانات للإرسال
+        const updateData = {
           ...product,
           priceReduction: priceReduction,
-          discount: 0
-        });
-        
-        // تحديث الحالة المحلية فقط لهذا المنتج
-        setProductReductions(prev => ({
-          ...prev,
-          [productId]: priceReduction
-        }));
-        
-        toast.success(`Réduction de ${formatPrice(priceReduction)} appliquée!`);
-      }
-    } catch (error) {
-      console.error("Error applying price reduction:", error);
-      toast.error("Erreur lors de l'application de la réduction");
-    }
-  };
+        };
 
-  const handleRemovePriceReduction = async (productId) => {
-    try {
-      const product = products.find(p => p._id === productId);
-      if (product) {
-        await updateProduct(productId, { 
-          ...product,
-          priceReduction: 0,
-          discount: product.discount || 0
-        });
-        
-        // إزالة من الحالة المحلية
-        setProductReductions(prev => {
-          const newReductions = { ...prev };
-          delete newReductions[productId];
-          return newReductions;
-        });
-        
-        toast.success("Réduction supprimée!");
+        // إذا وضعنا 0، نمسح التخفيض الفردي فقط
+        // ونعيد التخفيض الجماعي إذا كان موجوداً
+        if (isRemoving) {
+          updateData.priceReduction = 0;
+          // نحتفظ بالتخفيض الجماعي إذا كان موجوداً
+          updateData.discount = product.discount || 0;
+        } else {
+          // عند إضافة تخفيض بالسعر، نزيل التخفيض الجماعي
+          updateData.discount = 0;
+        }
+
+        await updateProduct(productId, updateData);
+
+        if (isRemoving) {
+          toast.success("Réduction individuelle supprimée!");
+        } else {
+          toast.success(
+            `Réduction de ${formatPrice(priceReduction)} appliquée!`
+          );
+        }
       }
     } catch (error) {
-      console.error("Error removing price reduction:", error);
-      toast.error("Erreur lors de la suppression de la réduction");
+      console.error("Error updating price reduction:", error);
+      toast.error("Erreur lors de la mise à jour");
+      // إعادة الحالة القديمة في حالة الخطأ
+      const product = products.find((p) => p._id === productId);
+      if (product) {
+        setTemporaryReductions((prev) => ({
+          ...prev,
+          [productId]: product.priceReduction || 0,
+        }));
+      }
     }
   };
 
@@ -353,12 +363,12 @@ const ProductsManager = ({ formatPrice }) => {
   const getFinalPrice = (product) => {
     const displayPrice = getDisplayPrice(product);
 
-    // أولوية لتخفيض السعر إذا كان موجوداً
+    // الأولوية للتخفيض بالسعر
     if (product.priceReduction && product.priceReduction > 0) {
       return Math.max(0, displayPrice - product.priceReduction);
     }
 
-    // إذا لم يكن هناك تخفيض بالسعر، نحسب بالتخفيض بالنسبة
+    // ثم التخفيض بالنسبة
     if (product.discount > 0) {
       return Math.round(displayPrice * (1 - product.discount / 100));
     }
@@ -381,6 +391,15 @@ const ProductsManager = ({ formatPrice }) => {
     try {
       const categories = bulkDiscount.applyToAll ? [] : bulkDiscount.categories;
       await applyDiscountToAll(bulkDiscount.discount, categories);
+
+      const updatedReductions = { ...temporaryReductions };
+      products.forEach((product) => {
+        if (bulkDiscount.applyToAll || categories.includes(product.category)) {
+          updatedReductions[product._id] = 0;
+        }
+      });
+      setTemporaryReductions(updatedReductions);
+
       toast.success(
         `Discount de ${bulkDiscount.discount}% appliqué avec succès!`
       );
@@ -401,6 +420,16 @@ const ProductsManager = ({ formatPrice }) => {
     try {
       const categories = bulkDiscount.applyToAll ? [] : bulkDiscount.categories;
       await removeDiscountFromAll(categories);
+
+      // تحديث التخفيضات المؤقتة بعد إزالة كل التخفيضات
+      const updatedReductions = { ...temporaryReductions };
+      products.forEach((product) => {
+        if (bulkDiscount.applyToAll || categories.includes(product.category)) {
+          updatedReductions[product._id] = 0;
+        }
+      });
+      setTemporaryReductions(updatedReductions);
+
       toast.success("Tous les discounts ont été supprimés avec succès!");
     } catch (error) {
       toast.error("Erreur lors de la suppression des discounts");
@@ -690,7 +719,7 @@ const ProductsManager = ({ formatPrice }) => {
                         Prix Original
                       </th>
                       <th className="text-left py-3 px-4 text-primary font-bold01 text-sm">
-                        Réduction Produit
+                        Réduction Produit (DA)
                       </th>
                       <th className="text-left py-3 px-4 text-primary font-bold01 text-sm">
                         Prix Final
@@ -705,7 +734,8 @@ const ProductsManager = ({ formatPrice }) => {
                       const displayPrice = getDisplayPrice(product);
                       const finalPrice = getFinalPrice(product);
                       const savings = displayPrice - finalPrice;
-                      const temporaryReduction = productReductions[product._id] || "";
+                      const tempReduction =
+                        temporaryReductions[product._id] || 0;
 
                       return (
                         <tr
@@ -765,68 +795,51 @@ const ProductsManager = ({ formatPrice }) => {
                           </td>
                           <td className="py-3 px-4">
                             <div className="space-y-3">
-                              {/* إذا كان هناك تخفيض جماعي يظهر كقراءة فقط */}
+                              {/* عرض التخفيض الجماعي */}
                               {product.discount > 0 && (
                                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
                                   <div className="text-xs text-yellow-700 font-bold01">
                                     Discount global: {product.discount}%
                                   </div>
+                                  <div className="text-xs text-yellow-600 mt-1">
+                                    Le discount individuel remplace le discount
+                                    global
+                                  </div>
                                 </div>
                               )}
-                              
-                              {/* حقل إدخال للسعر الجديد مع زر تطبيق */}
+
+                              {/* حقل إدخال للتخفيض بالسعر */}
                               <div className="space-y-2">
                                 <div className="flex items-center space-x-2">
                                   <input
                                     type="number"
                                     min="0"
                                     max={displayPrice}
-                                    value={temporaryReduction}
-                                    placeholder="Montant en DA"
+                                    value={tempReduction}
                                     onChange={(e) => {
-                                      const value = parseInt(e.target.value) || "";
-                                      setProductReductions(prev => ({
+                                      const value =
+                                        parseInt(e.target.value) || 0;
+                                      // تحديث الحالة المحلية مباشرة
+                                      setTemporaryReductions((prev) => ({
                                         ...prev,
-                                        [product._id]: value
+                                        [product._id]: value,
                                       }));
+                                      // تطبيق التغيير مباشرة
+                                      handlePriceReductionChange(
+                                        product._id,
+                                        value
+                                      );
                                     }}
                                     className="w-32 p-2 border border-primary/20 rounded-lg text-center text-sm focus:outline-none focus:border-secondary"
                                   />
-                                  <span className="text-primary/60 text-sm">DA</span>
+                                  <span className="text-primary/60 text-sm">
+                                    DA
+                                  </span>
                                 </div>
-                                
-                                <div className="flex items-center space-x-2">
-                                  {product.priceReduction > 0 ? (
-                                    <>
-                                      <button
-                                        onClick={() => handleApplyPriceReduction(product._id, temporaryReduction)}
-                                        disabled={!temporaryReduction || temporaryReduction <= 0}
-                                        className="flex-1 bg-blue-600 text-white py-1 px-3 rounded-lg text-xs font-bold01 hover:bg-blue-700 transition-all duration-300 disabled:opacity-50"
-                                      >
-                                        Mettre à jour
-                                      </button>
-                                      <button
-                                        onClick={() => handleRemovePriceReduction(product._id)}
-                                        className="flex-1 bg-red-600 text-white py-1 px-3 rounded-lg text-xs font-bold01 hover:bg-red-700 transition-all duration-300"
-                                      >
-                                        Supprimer
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <button
-                                      onClick={() => handleApplyPriceReduction(product._id, temporaryReduction)}
-                                      disabled={!temporaryReduction || temporaryReduction <= 0}
-                                      className="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-bold01 hover:bg-green-700 transition-all duration-300 disabled:opacity-50"
-                                    >
-                                      Appliquer
-                                    </button>
-                                  )}
-                                </div>
-                                
-                                {/* عرض التخفيض الحالي */}
+
                                 {product.priceReduction > 0 && (
                                   <div className="text-xs text-green-600 font-bold01">
-                                    Réduction actuelle: {formatPrice(product.priceReduction)}
+                                    Réduction appliquée
                                   </div>
                                 )}
                               </div>
@@ -836,7 +849,8 @@ const ProductsManager = ({ formatPrice }) => {
                             <div className="space-y-1">
                               <div
                                 className={`font-semibold font-p01 text-lg ${
-                                  (product.discount > 0 || product.priceReduction > 0) 
+                                  product.discount > 0 ||
+                                  product.priceReduction > 0
                                     ? "text-green-600"
                                     : "text-primary"
                                 }`}
@@ -850,12 +864,15 @@ const ProductsManager = ({ formatPrice }) => {
                                   </div>
                                   {product.priceReduction > 0 ? (
                                     <div className="text-xs text-blue-600 font-p01">
-                                      (Réduction: {formatPrice(product.priceReduction)})
+                                      (Réduction:{" "}
+                                      {formatPrice(product.priceReduction)})
                                     </div>
-                                  ) : product.discount > 0 && (
-                                    <div className="text-xs text-yellow-600 font-p01">
-                                      (Discount: {product.discount}%)
-                                    </div>
+                                  ) : (
+                                    product.discount > 0 && (
+                                      <div className="text-xs text-yellow-600 font-p01">
+                                        (Discount global: {product.discount}%)
+                                      </div>
+                                    )
                                   )}
                                 </div>
                               )}
@@ -941,7 +958,7 @@ const ProductsManager = ({ formatPrice }) => {
                   const displayPrice = getDisplayPrice(product);
                   const finalPrice = getFinalPrice(product);
                   const savings = displayPrice - finalPrice;
-                  const temporaryReduction = productReductions[product._id] || "";
+                  const tempReduction = temporaryReductions[product._id] || 0;
 
                   return (
                     <div
@@ -1007,7 +1024,7 @@ const ProductsManager = ({ formatPrice }) => {
                           </p>
                           <p
                             className={`font-semibold text-lg ${
-                              (product.discount > 0 || product.priceReduction > 0)
+                              product.discount > 0 || product.priceReduction > 0
                                 ? "text-green-600"
                                 : "text-primary"
                             }`}
@@ -1023,15 +1040,17 @@ const ProductsManager = ({ formatPrice }) => {
                       </div>
 
                       <div className="mb-3">
-                        {/* عرض التخفيض الجماعي إذا تم تطبيقه */}
                         {product.discount > 0 && (
                           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mb-2">
                             <div className="text-xs text-yellow-700 font-bold01">
                               Discount global: {product.discount}%
                             </div>
+                            <div className="text-xs text-yellow-600 mt-1">
+                              Le discount individuel remplace le discount global
+                            </div>
                           </div>
                         )}
-                        
+
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <span className="text-primary/60 text-xs">
@@ -1042,53 +1061,29 @@ const ProductsManager = ({ formatPrice }) => {
                                 type="number"
                                 min="0"
                                 max={displayPrice}
-                                value={temporaryReduction}
-                                placeholder="Montant"
+                                value={tempReduction}
                                 onChange={(e) => {
-                                  const value = parseInt(e.target.value) || "";
-                                  setProductReductions(prev => ({
+                                  const value = parseInt(e.target.value) || 0;
+                                  setTemporaryReductions((prev) => ({
                                     ...prev,
-                                    [product._id]: value
+                                    [product._id]: value,
                                   }));
+                                  handlePriceReductionChange(
+                                    product._id,
+                                    value
+                                  );
                                 }}
                                 className="w-24 p-2 border border-primary/20 rounded text-center text-xs focus:outline-none focus:border-secondary"
                               />
-                              <span className="text-primary/60 text-xs">DA</span>
+                              <span className="text-primary/60 text-xs">
+                                DA
+                              </span>
                             </div>
                           </div>
-                          
-                          <div className="flex items-center space-x-2">
-                            {product.priceReduction > 0 ? (
-                              <>
-                                <button
-                                  onClick={() => handleApplyPriceReduction(product._id, temporaryReduction)}
-                                  disabled={!temporaryReduction || temporaryReduction <= 0}
-                                  className="flex-1 bg-blue-600 text-white py-1 px-2 rounded-lg text-xs font-bold01 hover:bg-blue-700 transition-all duration-300 disabled:opacity-50"
-                                >
-                                  Mettre à jour
-                                </button>
-                                <button
-                                  onClick={() => handleRemovePriceReduction(product._id)}
-                                  className="flex-1 bg-red-600 text-white py-1 px-2 rounded-lg text-xs font-bold01 hover:bg-red-700 transition-all duration-300"
-                                >
-                                  Supprimer
-                                </button>
-                              </>
-                            ) : (
-                              <button
-                                onClick={() => handleApplyPriceReduction(product._id, temporaryReduction)}
-                                disabled={!temporaryReduction || temporaryReduction <= 0}
-                                className="w-full bg-green-600 text-white py-2 rounded-lg text-xs font-bold01 hover:bg-green-700 transition-all duration-300 disabled:opacity-50"
-                              >
-                                Appliquer la réduction
-                              </button>
-                            )}
-                          </div>
-                          
-                          {/* عرض التخفيض الحالي */}
+
                           {product.priceReduction > 0 && (
                             <div className="text-xs text-green-600 text-center font-bold01">
-                              Réduction actuelle: {formatPrice(product.priceReduction)}
+                              Réduction appliquée
                             </div>
                           )}
                         </div>
