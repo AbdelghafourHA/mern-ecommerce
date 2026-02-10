@@ -270,9 +270,9 @@ const ProductsManager = ({ formatPrice }) => {
       const product = products.find((p) => p._id === productId);
       if (!product) return;
 
-      const displayPrice = getDisplayPrice(product);
+      const basePrice = product.price;
 
-      const percent = priceToPercent(displayPrice, discountInDA);
+      const percent = priceToPercent(basePrice, discountInDA);
 
       await productDiscount(productId, percent);
     } catch (error) {
@@ -743,7 +743,9 @@ const ProductsManager = ({ formatPrice }) => {
                                 }}
                                 className="w-14 p-2 border border-primary/20 rounded-lg text-center text-sm focus:outline-none focus:border-secondary"
                               />
-                              <span className="text-primary/60 text-xs">%</span>
+                              <span className="text-primary/60 text-xs">
+                                DA
+                              </span>
                             </div>
                           </td>
                           <td className="py-3 px-4">
@@ -956,7 +958,7 @@ const ProductsManager = ({ formatPrice }) => {
                             }}
                             className="w-14 p-1 border border-primary/20 rounded text-center text-xs focus:outline-none focus:border-secondary"
                           />
-                          <span className="text-primary/60 text-xs">%</span>
+                          <span className="text-primary/60 text-xs">DA</span>
                         </div>
 
                         <div className="flex items-center space-x-2">
