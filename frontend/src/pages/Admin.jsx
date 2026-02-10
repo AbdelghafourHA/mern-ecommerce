@@ -211,6 +211,7 @@ const ProductsManager = ({ formatPrice }) => {
   const [applyingBulkDiscount, setApplyingBulkDiscount] = useState(false);
   const [isBulkDiscountOpen, setIsBulkDiscountOpen] = useState(false);
   const searchTimeout = useRef(null);
+  const [localDiscounts, setLocalDiscounts] = useState({});
 
   const {
     products,
@@ -240,6 +241,25 @@ const ProductsManager = ({ formatPrice }) => {
     filters.sort,
   ]);
 
+  const getBasePrice = (product) => {
+    if (product.category === "Decants" && product.volumePricing) {
+      const map =
+        product.volumePricing instanceof Map
+          ? Object.fromEntries(product.volumePricing)
+          : product.volumePricing;
+
+      const volume = product.defaultVolume || "10ml";
+      return map?.[volume] || product.price;
+    }
+
+    return product.price;
+  };
+
+  const priceToPercent = (basePrice, discountDA) => {
+    if (!basePrice || basePrice <= 0) return 0;
+    return Math.min(100, Math.round((discountDA / basePrice) * 100));
+  };
+
   const handleSearch = (e) => {
     const value = e.target.value;
 
@@ -260,61 +280,34 @@ const ProductsManager = ({ formatPrice }) => {
     ...new Set(products.map((p) => p.category).filter(Boolean)),
   ];
 
-  const priceToPercent = (price, discountValue) => {
-    if (!price || price <= 0) return 0;
-    return Math.min(100, Math.round((discountValue / price) * 100));
-  };
-
-  const handleDiscountChange = async (productId, discountInDA) => {
+  const handleDiscountChange = async (productId, discountDA) => {
     try {
       const product = products.find((p) => p._id === productId);
       if (!product) return;
 
-      const basePrice = product.price;
-
-      const percent = priceToPercent(basePrice, discountInDA);
+      const basePrice = getBasePrice(product);
+      const percent = priceToPercent(basePrice, discountDA);
 
       await productDiscount(productId, percent);
-    } catch (error) {
-      console.error("Error updating discount:", error);
+
+      setLocalDiscounts((prev) => {
+        const copy = { ...prev };
+        delete copy[productId];
+        return copy;
+      });
+    } catch (err) {
+      console.error(err);
     }
-  };
-
-  const getDisplayPrice = (product) => {
-    if (product.category === "Decants" && product.volumePricing) {
-      let volumePricing;
-      if (
-        product.volumePricing instanceof Map ||
-        product.volumePricing[Symbol.iterator]
-      ) {
-        try {
-          volumePricing = Object.fromEntries(product.volumePricing);
-        } catch {
-          volumePricing = {};
-        }
-      } else {
-        volumePricing = product.volumePricing || {};
-      }
-
-      const defaultVolume = product.defaultVolume || "10ml";
-      const volumePrice = volumePricing[defaultVolume];
-
-      if (volumePrice !== undefined) {
-        return volumePrice;
-      }
-    }
-
-    return product.price;
   };
 
   const getFinalPrice = (product) => {
-    const displayPrice = getDisplayPrice(product);
+    const basePrice = getBasePrice(product);
 
     if (product.discount > 0) {
-      return Math.round(displayPrice * (1 - product.discount / 100));
+      return Math.round(basePrice * (1 - product.discount / 100));
     }
 
-    return displayPrice;
+    return basePrice;
   };
 
   const handleBulkDiscount = async () => {
@@ -390,7 +383,6 @@ const ProductsManager = ({ formatPrice }) => {
       />
     );
   }
-  const [localDiscounts, setLocalDiscounts] = useState({});
 
   return (
     <div>
@@ -654,9 +646,9 @@ const ProductsManager = ({ formatPrice }) => {
                   </thead>
                   <tbody>
                     {products.map((product) => {
-                      const displayPrice = getDisplayPrice(product);
+                      const basePrice = getBasePrice(product);
                       const finalPrice = getFinalPrice(product);
-                      const savings = displayPrice - finalPrice;
+                      const savings = basePrice - finalPrice;
 
                       return (
                         <tr
@@ -706,7 +698,7 @@ const ProductsManager = ({ formatPrice }) => {
                           </td>
                           <td className="py-3 px-4">
                             <div className="font-semibold text-primary font-p01 text-sm">
-                              {formatPrice(displayPrice)}
+                              {formatPrice(basePrice)}
                               {product.category === "Decants" && (
                                 <span className="text-xs text-primary/60 block">
                                   {product.defaultVolume || "10ml"}
@@ -719,15 +711,13 @@ const ProductsManager = ({ formatPrice }) => {
                               <input
                                 type="number"
                                 min="0"
-                                max="100"
+                                max={basePrice}
                                 value={
                                   localDiscounts[product._id] !== undefined
                                     ? localDiscounts[product._id]
                                     : product.discount
                                     ? Math.round(
-                                        (getDisplayPrice(product) *
-                                          product.discount) /
-                                          100
+                                        (basePrice * product.discount) / 100
                                       )
                                     : 0
                                 }
@@ -843,9 +833,9 @@ const ProductsManager = ({ formatPrice }) => {
                 </div>
               ) : (
                 products.map((product) => {
-                  const displayPrice = getDisplayPrice(product);
+                  const basePrice = getBasePrice(product);
                   const finalPrice = getFinalPrice(product);
-                  const savings = displayPrice - finalPrice;
+                  const savings = basePrice - finalPrice;
 
                   return (
                     <div
@@ -897,7 +887,7 @@ const ProductsManager = ({ formatPrice }) => {
                               : "Prix Original"}
                           </p>
                           <p className="font-semibold text-primary text-sm">
-                            {formatPrice(displayPrice)}
+                            {formatPrice(basePrice)}
                             {product.category === "Decants" && (
                               <span className="block text-xs text-primary/60">
                                 {product.defaultVolume || "10ml"}
@@ -934,15 +924,13 @@ const ProductsManager = ({ formatPrice }) => {
                           <input
                             type="number"
                             min="0"
-                            max="100"
+                            max={basePrice}
                             value={
                               localDiscounts[product._id] !== undefined
                                 ? localDiscounts[product._id]
                                 : product.discount
                                 ? Math.round(
-                                    (getDisplayPrice(product) *
-                                      product.discount) /
-                                      100
+                                    (basePrice * product.discount) / 100
                                   )
                                 : 0
                             }
