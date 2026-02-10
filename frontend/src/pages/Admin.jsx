@@ -211,7 +211,6 @@ const ProductsManager = ({ formatPrice }) => {
   const [applyingBulkDiscount, setApplyingBulkDiscount] = useState(false);
   const [isBulkDiscountOpen, setIsBulkDiscountOpen] = useState(false);
   const searchTimeout = useRef(null);
-  const [temporaryReductions, setTemporaryReductions] = useState({});
 
   const {
     products,
@@ -241,16 +240,6 @@ const ProductsManager = ({ formatPrice }) => {
     filters.sort,
   ]);
 
-  useEffect(() => {
-    if (products.length > 0) {
-      const reductions = {};
-      products.forEach((product) => {
-        reductions[product._id] = product.priceReduction || 0;
-      });
-      setTemporaryReductions(reductions);
-    }
-  }, [products]);
-
   const handleSearch = (e) => {
     const value = e.target.value;
 
@@ -271,63 +260,21 @@ const ProductsManager = ({ formatPrice }) => {
     ...new Set(products.map((p) => p.category).filter(Boolean)),
   ];
 
-  const handlePriceReductionChange = async (productId, priceReduction) => {
-    try {
-      // قيمة 0 تعني إزالة التخفيض
-      const isRemoving = priceReduction === 0;
-
-      const product = products.find((p) => p._id === productId);
-      if (product) {
-        // تحديث الحالة المحلية أولاً
-        setTemporaryReductions((prev) => ({
-          ...prev,
-          [productId]: priceReduction,
-        }));
-
-        // إعداد البيانات للإرسال
-        const updateData = {
-          ...product,
-          priceReduction: priceReduction,
-        };
-
-        // إذا وضعنا 0، نمسح التخفيض الفردي فقط
-        // ونعيد التخفيض الجماعي إذا كان موجوداً
-        if (isRemoving) {
-          updateData.priceReduction = 0;
-          // نحتفظ بالتخفيض الجماعي إذا كان موجوداً
-          updateData.discount = product.discount || 0;
-        } else {
-          // عند إضافة تخفيض بالسعر، نزيل التخفيض الجماعي
-          updateData.discount = 0;
-        }
-
-        await updateProduct(productId, updateData);
-
-        if (isRemoving) {
-          toast.success("Réduction individuelle supprimée!");
-        } else {
-          toast.success(
-            `Réduction de ${formatPrice(priceReduction)} appliquée!`
-          );
-        }
-      }
-    } catch (error) {
-      console.error("Error updating price reduction:", error);
-      toast.error("Erreur lors de la mise à jour");
-      // إعادة الحالة القديمة في حالة الخطأ
-      const product = products.find((p) => p._id === productId);
-      if (product) {
-        setTemporaryReductions((prev) => ({
-          ...prev,
-          [productId]: product.priceReduction || 0,
-        }));
-      }
-    }
+  const priceToPercent = (price, discountValue) => {
+    if (!price || price <= 0) return 0;
+    return Math.min(100, Math.round((discountValue / price) * 100));
   };
 
-  const handleDiscountChange = async (productId, newDiscount) => {
+  const handleDiscountChange = async (productId, discountInDA) => {
     try {
-      await productDiscount(productId, newDiscount);
+      const product = products.find((p) => p._id === productId);
+      if (!product) return;
+
+      const displayPrice = getDisplayPrice(product);
+
+      const percent = priceToPercent(displayPrice, discountInDA);
+
+      await productDiscount(productId, percent);
     } catch (error) {
       console.error("Error updating discount:", error);
     }
@@ -363,12 +310,6 @@ const ProductsManager = ({ formatPrice }) => {
   const getFinalPrice = (product) => {
     const displayPrice = getDisplayPrice(product);
 
-    // الأولوية للتخفيض بالسعر
-    if (product.priceReduction && product.priceReduction > 0) {
-      return Math.max(0, displayPrice - product.priceReduction);
-    }
-
-    // ثم التخفيض بالنسبة
     if (product.discount > 0) {
       return Math.round(displayPrice * (1 - product.discount / 100));
     }
@@ -391,15 +332,6 @@ const ProductsManager = ({ formatPrice }) => {
     try {
       const categories = bulkDiscount.applyToAll ? [] : bulkDiscount.categories;
       await applyDiscountToAll(bulkDiscount.discount, categories);
-
-      const updatedReductions = { ...temporaryReductions };
-      products.forEach((product) => {
-        if (bulkDiscount.applyToAll || categories.includes(product.category)) {
-          updatedReductions[product._id] = 0;
-        }
-      });
-      setTemporaryReductions(updatedReductions);
-
       toast.success(
         `Discount de ${bulkDiscount.discount}% appliqué avec succès!`
       );
@@ -420,16 +352,6 @@ const ProductsManager = ({ formatPrice }) => {
     try {
       const categories = bulkDiscount.applyToAll ? [] : bulkDiscount.categories;
       await removeDiscountFromAll(categories);
-
-      // تحديث التخفيضات المؤقتة بعد إزالة كل التخفيضات
-      const updatedReductions = { ...temporaryReductions };
-      products.forEach((product) => {
-        if (bulkDiscount.applyToAll || categories.includes(product.category)) {
-          updatedReductions[product._id] = 0;
-        }
-      });
-      setTemporaryReductions(updatedReductions);
-
       toast.success("Tous les discounts ont été supprimés avec succès!");
     } catch (error) {
       toast.error("Erreur lors de la suppression des discounts");
@@ -517,7 +439,7 @@ const ProductsManager = ({ formatPrice }) => {
           <div className="flex items-center">
             <Tag className="text-secondary mr-2" size={20} />
             <span className="font-bold01 text-primary text-sm lg:text-base">
-              Discount en Masse (Par %)
+              Discount en Masse
             </span>
           </div>
           <ChevronDown
@@ -716,13 +638,13 @@ const ProductsManager = ({ formatPrice }) => {
                         Catégorie
                       </th>
                       <th className="text-left py-3 px-4 text-primary font-bold01 text-sm">
-                        Prix Original
+                        Prix
                       </th>
                       <th className="text-left py-3 px-4 text-primary font-bold01 text-sm">
-                        Réduction Produit (DA)
+                        Discount
                       </th>
                       <th className="text-left py-3 px-4 text-primary font-bold01 text-sm">
-                        Prix Final
+                        Final
                       </th>
                       <th className="text-left py-3 px-4 text-primary font-bold01 text-sm">
                         Actions
@@ -734,8 +656,6 @@ const ProductsManager = ({ formatPrice }) => {
                       const displayPrice = getDisplayPrice(product);
                       const finalPrice = getFinalPrice(product);
                       const savings = displayPrice - finalPrice;
-                      const tempReduction =
-                        temporaryReductions[product._id] || 0;
 
                       return (
                         <tr
@@ -794,63 +714,36 @@ const ProductsManager = ({ formatPrice }) => {
                             </div>
                           </td>
                           <td className="py-3 px-4">
-                            <div className="space-y-3">
-                              {/* عرض التخفيض الجماعي */}
-                              {product.discount > 0 && (
-                                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
-                                  <div className="text-xs text-yellow-700 font-bold01">
-                                    Discount global: {product.discount}%
-                                  </div>
-                                  <div className="text-xs text-yellow-600 mt-1">
-                                    Le discount individuel remplace le discount
-                                    global
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* حقل إدخال للتخفيض بالسعر */}
-                              <div className="space-y-2">
-                                <div className="flex items-center space-x-2">
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    max={displayPrice}
-                                    value={tempReduction}
-                                    onChange={(e) => {
-                                      const value =
-                                        parseInt(e.target.value) || 0;
-                                      // تحديث الحالة المحلية مباشرة
-                                      setTemporaryReductions((prev) => ({
-                                        ...prev,
-                                        [product._id]: value,
-                                      }));
-                                      // تطبيق التغيير مباشرة
-                                      handlePriceReductionChange(
-                                        product._id,
-                                        value
-                                      );
-                                    }}
-                                    className="w-32 p-2 border border-primary/20 rounded-lg text-center text-sm focus:outline-none focus:border-secondary"
-                                  />
-                                  <span className="text-primary/60 text-sm">
-                                    DA
-                                  </span>
-                                </div>
-
-                                {product.priceReduction > 0 && (
-                                  <div className="text-xs text-green-600 font-bold01">
-                                    Réduction appliquée
-                                  </div>
-                                )}
-                              </div>
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={
+                                  product.discount
+                                    ? Math.round(
+                                        (getDisplayPrice(product) *
+                                          product.discount) /
+                                          100
+                                      )
+                                    : 0
+                                }
+                                onChange={(e) =>
+                                  handleDiscountChange(
+                                    product._id,
+                                    parseInt(e.target.value) || 0
+                                  )
+                                }
+                                className="w-14 p-2 border border-primary/20 rounded-lg text-center text-sm focus:outline-none focus:border-secondary"
+                              />
+                              <span className="text-primary/60 text-xs">%</span>
                             </div>
                           </td>
                           <td className="py-3 px-4">
                             <div className="space-y-1">
                               <div
-                                className={`font-semibold font-p01 text-lg ${
-                                  product.discount > 0 ||
-                                  product.priceReduction > 0
+                                className={`font-semibold font-p01 text-sm ${
+                                  product.discount > 0
                                     ? "text-green-600"
                                     : "text-primary"
                                 }`}
@@ -858,22 +751,8 @@ const ProductsManager = ({ formatPrice }) => {
                                 {formatPrice(finalPrice)}
                               </div>
                               {savings > 0 && (
-                                <div className="space-y-1">
-                                  <div className="text-xs text-red-600 font-p01">
-                                    Économie: {formatPrice(savings)}
-                                  </div>
-                                  {product.priceReduction > 0 ? (
-                                    <div className="text-xs text-blue-600 font-p01">
-                                      (Réduction:{" "}
-                                      {formatPrice(product.priceReduction)})
-                                    </div>
-                                  ) : (
-                                    product.discount > 0 && (
-                                      <div className="text-xs text-yellow-600 font-p01">
-                                        (Discount global: {product.discount}%)
-                                      </div>
-                                    )
-                                  )}
+                                <div className="text-xs text-red-600 font-p01">
+                                  -{formatPrice(savings)}
                                 </div>
                               )}
                             </div>
@@ -958,7 +837,6 @@ const ProductsManager = ({ formatPrice }) => {
                   const displayPrice = getDisplayPrice(product);
                   const finalPrice = getFinalPrice(product);
                   const savings = displayPrice - finalPrice;
-                  const tempReduction = temporaryReductions[product._id] || 0;
 
                   return (
                     <div
@@ -1023,8 +901,8 @@ const ProductsManager = ({ formatPrice }) => {
                             Prix Final
                           </p>
                           <p
-                            className={`font-semibold text-lg ${
-                              product.discount > 0 || product.priceReduction > 0
+                            className={`font-semibold text-sm ${
+                              product.discount > 0
                                 ? "text-green-600"
                                 : "text-primary"
                             }`}
@@ -1039,57 +917,35 @@ const ProductsManager = ({ formatPrice }) => {
                         </div>
                       </div>
 
-                      <div className="mb-3">
-                        {product.discount > 0 && (
-                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mb-2">
-                            <div className="text-xs text-yellow-700 font-bold01">
-                              Discount global: {product.discount}%
-                            </div>
-                            <div className="text-xs text-yellow-600 mt-1">
-                              Le discount individuel remplace le discount global
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-primary/60 text-xs">
-                              Réduction DA:
-                            </span>
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="number"
-                                min="0"
-                                max={displayPrice}
-                                value={tempReduction}
-                                onChange={(e) => {
-                                  const value = parseInt(e.target.value) || 0;
-                                  setTemporaryReductions((prev) => ({
-                                    ...prev,
-                                    [product._id]: value,
-                                  }));
-                                  handlePriceReductionChange(
-                                    product._id,
-                                    value
-                                  );
-                                }}
-                                className="w-24 p-2 border border-primary/20 rounded text-center text-xs focus:outline-none focus:border-secondary"
-                              />
-                              <span className="text-primary/60 text-xs">
-                                DA
-                              </span>
-                            </div>
-                          </div>
-
-                          {product.priceReduction > 0 && (
-                            <div className="text-xs text-green-600 text-center font-bold01">
-                              Réduction appliquée
-                            </div>
-                          )}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-primary/60 text-xs">
+                            Discount:
+                          </span>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={
+                              product.discount
+                                ? Math.round(
+                                    (getDisplayPrice(product) *
+                                      product.discount) /
+                                      100
+                                  )
+                                : 0
+                            }
+                            onChange={(e) =>
+                              handleDiscountChange(
+                                product._id,
+                                parseInt(e.target.value) || 0
+                              )
+                            }
+                            className="w-14 p-1 border border-primary/20 rounded text-center text-xs focus:outline-none focus:border-secondary"
+                          />
+                          <span className="text-primary/60 text-xs">%</span>
                         </div>
-                      </div>
 
-                      <div className="flex items-center justify-between pt-3 border-t border-primary/10">
                         <div className="flex items-center space-x-2">
                           <button
                             onClick={() => toggleFeatured(product._id)}
@@ -1119,8 +975,6 @@ const ProductsManager = ({ formatPrice }) => {
                               fill={product.inStock ? "currentColor" : "none"}
                             />
                           </button>
-                        </div>
-                        <div className="flex items-center space-x-2">
                           <button
                             onClick={() => setEditingProduct(product)}
                             className="p-1 bg-primary/10 text-primary rounded-lg"
