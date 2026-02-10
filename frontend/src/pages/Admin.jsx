@@ -390,6 +390,7 @@ const ProductsManager = ({ formatPrice }) => {
       />
     );
   }
+  const [localDiscounts, setLocalDiscounts] = useState({});
 
   return (
     <div>
@@ -720,7 +721,9 @@ const ProductsManager = ({ formatPrice }) => {
                                 min="0"
                                 max="100"
                                 value={
-                                  product.discount
+                                  localDiscounts[product._id] !== undefined
+                                    ? localDiscounts[product._id]
+                                    : product.discount
                                     ? Math.round(
                                         (getDisplayPrice(product) *
                                           product.discount) /
@@ -728,12 +731,16 @@ const ProductsManager = ({ formatPrice }) => {
                                       )
                                     : 0
                                 }
-                                onChange={(e) =>
-                                  handleDiscountChange(
-                                    product._id,
-                                    parseInt(e.target.value) || 0
-                                  )
-                                }
+                                onChange={(e) => {
+                                  const value = parseInt(e.target.value) || 0;
+
+                                  setLocalDiscounts((prev) => ({
+                                    ...prev,
+                                    [product._id]: value,
+                                  }));
+
+                                  handleDiscountChange(product._id, value);
+                                }}
                                 className="w-14 p-2 border border-primary/20 rounded-lg text-center text-sm focus:outline-none focus:border-secondary"
                               />
                               <span className="text-primary/60 text-xs">%</span>
@@ -927,7 +934,9 @@ const ProductsManager = ({ formatPrice }) => {
                             min="0"
                             max="100"
                             value={
-                              product.discount
+                              localDiscounts[product._id] !== undefined
+                                ? localDiscounts[product._id]
+                                : product.discount
                                 ? Math.round(
                                     (getDisplayPrice(product) *
                                       product.discount) /
@@ -935,12 +944,16 @@ const ProductsManager = ({ formatPrice }) => {
                                   )
                                 : 0
                             }
-                            onChange={(e) =>
-                              handleDiscountChange(
-                                product._id,
-                                parseInt(e.target.value) || 0
-                              )
-                            }
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 0;
+
+                              setLocalDiscounts((prev) => ({
+                                ...prev,
+                                [product._id]: value,
+                              }));
+
+                              handleDiscountChange(product._id, value);
+                            }}
                             className="w-14 p-1 border border-primary/20 rounded text-center text-xs focus:outline-none focus:border-secondary"
                           />
                           <span className="text-primary/60 text-xs">%</span>
