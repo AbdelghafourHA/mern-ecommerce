@@ -289,12 +289,6 @@ const ProductsManager = ({ formatPrice }) => {
       const percent = priceToPercent(basePrice, discountDA);
 
       await productDiscount(productId, percent);
-
-      setLocalDiscounts((prev) => {
-        const copy = { ...prev };
-        delete copy[productId];
-        return copy;
-      });
     } catch (err) {
       console.error(err);
     }
@@ -728,8 +722,23 @@ const ProductsManager = ({ formatPrice }) => {
                                     ...prev,
                                     [product._id]: value,
                                   }));
-
-                                  handleDiscountChange(product._id, value);
+                                }}
+                                onBlur={() => {
+                                  const value =
+                                    localDiscounts[product._id] || 0;
+                                  if (value >= 0) {
+                                    handleDiscountChange(product._id, value);
+                                  }
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    const value =
+                                      localDiscounts[product._id] || 0;
+                                    if (value >= 0) {
+                                      handleDiscountChange(product._id, value);
+                                      e.currentTarget.blur();
+                                    }
+                                  }
                                 }}
                                 className="w-14 p-2 border border-primary/20 rounded-lg text-center text-sm focus:outline-none focus:border-secondary"
                               />
@@ -941,8 +950,21 @@ const ProductsManager = ({ formatPrice }) => {
                                 ...prev,
                                 [product._id]: value,
                               }));
-
-                              handleDiscountChange(product._id, value);
+                            }}
+                            onBlur={() => {
+                              const value = localDiscounts[product._id] || 0;
+                              if (value >= 0) {
+                                handleDiscountChange(product._id, value);
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                const value = localDiscounts[product._id] || 0;
+                                if (value >= 0) {
+                                  handleDiscountChange(product._id, value);
+                                  e.currentTarget.blur();
+                                }
+                              }
                             }}
                             className="w-14 p-1 border border-primary/20 rounded text-center text-xs focus:outline-none focus:border-secondary"
                           />
