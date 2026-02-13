@@ -486,8 +486,8 @@ const CosmeticCard = ({ cosmetic, formatPrice, calculateFinalPrice }) => {
           {hasDiscount && (
             <div className="absolute top-10 left-2 bg-red-500 text-white px-2 py-1 rounded-full text-[10px] sm:text-xs font-bold">
               {hasPercentDiscount
-                ? `-${product.discount}%`
-                : `-${formatPrice(product.fixedDiscount)}`}
+                ? `-${cosmetic.discount}%`
+                : `-${formatPrice(cosmetic.fixedDiscount)}`}
             </div>
           )}
 

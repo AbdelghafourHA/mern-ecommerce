@@ -10,30 +10,30 @@ import {
 import { useNavigate } from "react-router-dom";
 import algeriaWillayas from "../utils/Willaya.json";
 import { useCheckoutStore } from "../stores/useCheckoutStore";
-import { useShippingStore } from "../stores/useShippingStore"; // إضافة الـ store الجديد
+import { useShippingStore } from "../stores/useShippingStore";
 
 const Checkout = () => {
+  const {
+    shipping,
+    fetchShipping,
+    loading: shippingLoading,
+  } = useShippingStore();
+
   const [items, setItems] = useState([]);
   const [checkoutTotal, setCheckoutTotal] = useState(0);
   const [itemCount, setItemCount] = useState(0);
   const [isDirectCheckout, setIsDirectCheckout] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
 
-  // إضافة state جديد لحساب سعر الشحن
   const [shippingPrice, setShippingPrice] = useState(0);
   const [selectedWilaya, setSelectedWilaya] = useState(null);
 
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const { createCheckout } = useCheckoutStore();
-  const {
-    shipping,
-    fetchShipping,
-    loading: shippingLoading,
-  } = useShippingStore(); // جلب بيانات الشحن
 
   useEffect(() => {
-    fetchShipping(); // جلب بيانات الشحن عند تحميل المكون
+    fetchShipping();
   }, []);
 
   useEffect(() => {
@@ -43,9 +43,18 @@ const Checkout = () => {
 
     if (directCheckoutData && directCheckoutData.directCheckout) {
       setIsDirectCheckout(true);
-      setItems([directCheckoutData.product]);
-      setCheckoutTotal(directCheckoutData.total);
-      setItemCount(directCheckoutData.count);
+      setIsDirectCheckout(true);
+      const product = directCheckoutData.product;
+
+      setItems([product]);
+
+      const newTotal = getFinalPrice(product) * product.quantity;
+      setCheckoutTotal(newTotal);
+      setItemCount(product.quantity);
+
+      setTimeout(() => {
+        localStorage.removeItem("directCheckout");
+      }, 100);
 
       setTimeout(() => {
         localStorage.removeItem("directCheckout");
@@ -55,65 +64,10 @@ const Checkout = () => {
       setIsDirectCheckout(false);
       setItems(cart);
 
-      const newTotal = cart.reduce((sum, item) => {
-        if (item.category === "Decants") {
-          if (
-            item.discount > 0 &&
-            item.discountedVolumePricing &&
-            item.selectedSize
-          ) {
-            let discountedVolumePricing = {};
-            if (
-              item.discountedVolumePricing instanceof Map ||
-              item.discountedVolumePricing[Symbol.iterator]
-            ) {
-              try {
-                discountedVolumePricing = Object.fromEntries(
-                  item.discountedVolumePricing
-                );
-              } catch {
-                discountedVolumePricing = {};
-              }
-            } else {
-              discountedVolumePricing = item.discountedVolumePricing || {};
-            }
-
-            const discountedPrice = discountedVolumePricing[item.selectedSize];
-            if (discountedPrice) {
-              return sum + discountedPrice * item.quantity;
-            }
-          }
-
-          let volumePricing = {};
-          if (
-            item.volumePricing instanceof Map ||
-            item.volumePricing[Symbol.iterator]
-          ) {
-            try {
-              volumePricing = Object.fromEntries(item.volumePricing);
-            } catch {
-              volumePricing = {};
-            }
-          } else {
-            volumePricing = item.volumePricing || {};
-          }
-
-          const volumePrice = volumePricing[item.selectedSize] || item.price;
-          const finalPrice =
-            item.discount > 0
-              ? Math.round(volumePrice * (1 - item.discount / 100))
-              : volumePrice;
-          return sum + finalPrice * item.quantity;
-        }
-
-        const price =
-          item.discount > 0
-            ? item.newPrice > 0
-              ? item.newPrice
-              : Math.round(item.price * (1 - item.discount / 100))
-            : item.price;
-        return sum + price * item.quantity;
-      }, 0);
+      const newTotal = cart.reduce(
+        (sum, item) => sum + getFinalPrice(item) * item.quantity,
+        0
+      );
 
       const newCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -153,63 +107,42 @@ const Checkout = () => {
   });
 
   const formatPrice = (price) => {
-    return `${price?.toLocaleString("fr-FR") || 0} DA`;
+    const safe = typeof price === "number" ? price : 0;
+    return `${safe.toLocaleString("fr-FR")} DA`;
   };
 
-  const getItemPrice = (item) => {
-    if (item.category === "Decants") {
-      if (
-        item.discount > 0 &&
-        item.discountedVolumePricing &&
-        item.selectedSize
-      ) {
-        let discountedVolumePricing = {};
-        if (
-          item.discountedVolumePricing instanceof Map ||
-          item.discountedVolumePricing[Symbol.iterator]
-        ) {
-          try {
-            discountedVolumePricing = Object.fromEntries(
-              item.discountedVolumePricing
-            );
-          } catch {
-            discountedVolumePricing = {};
-          }
-        } else {
-          discountedVolumePricing = item.discountedVolumePricing || {};
-        }
+  const getOriginalPrice = (item) => {
+    if (
+      item.category === "Decants" &&
+      item.selectedSize &&
+      item.volumePricing
+    ) {
+      try {
+        const volumes = Array.isArray(item.volumePricing)
+          ? Object.fromEntries(item.volumePricing)
+          : item.volumePricing;
 
-        const discountedPrice = discountedVolumePricing[item.selectedSize];
-        if (discountedPrice) {
-          return discountedPrice;
-        }
+        return Number(volumes[item.selectedSize]) || Number(item.price) || 0;
+      } catch {
+        return Number(item.price) || 0;
       }
-
-      let volumePricing = {};
-      if (
-        item.volumePricing instanceof Map ||
-        item.volumePricing[Symbol.iterator]
-      ) {
-        try {
-          volumePricing = Object.fromEntries(item.volumePricing);
-        } catch {
-          volumePricing = {};
-        }
-      } else {
-        volumePricing = item.volumePricing || {};
-      }
-
-      const volumePrice = volumePricing[item.selectedSize] || item.price;
-      return item.discount > 0
-        ? Math.round(volumePrice * (1 - item.discount / 100))
-        : volumePrice;
     }
 
-    return item.discount > 0
-      ? item.newPrice > 0
-        ? item.newPrice
-        : Math.round(item.price * (1 - item.discount / 100))
-      : item.price;
+    return Number(item.originalPrice || item.price) || 0;
+  };
+
+  const getFinalPrice = (item) => {
+    const basePrice = getOriginalPrice(item);
+
+    if (item.fixedDiscount > 0) {
+      return Math.max(basePrice - item.fixedDiscount, 0);
+    }
+
+    if (item.discount > 0) {
+      return Math.round(basePrice * (1 - item.discount / 100));
+    }
+
+    return basePrice;
   };
 
   const handleInputChange = (e) => {
@@ -295,7 +228,6 @@ const Checkout = () => {
       return;
     }
 
-    // التحقق من وجود سعر للشحن
     if (shippingPrice === 0 && formData.willaya) {
       alert("Veuillez sélectionner une wilaya valide pour la livraison.");
       return;
@@ -305,7 +237,7 @@ const Checkout = () => {
       name: item.title,
       quantity: item.quantity,
       image: item.image,
-      price: getItemPrice(item),
+      price: getFinalPrice(item),
       product: item._id,
       volume:
         item.selectedSize ||
@@ -320,7 +252,6 @@ const Checkout = () => {
       shippingPrice: shippingPrice,
       totalPrice: total,
       checkoutType: isDirectCheckout ? "direct" : "cart",
-      // إضافة معلومات إضافية عن الشحن
       wilayaCode: selectedWilaya?.wilayaCode || 0,
       wilayaName: selectedWilaya?.wilayaName || "",
     };
@@ -522,7 +453,7 @@ const Checkout = () => {
                   </div>
                 ) : (
                   items.map((item) => {
-                    const itemPrice = getItemPrice(item);
+                    const itemPrice = getFinalPrice(item);
 
                     return (
                       <div key={item._id} className="flex space-x-3">
@@ -576,7 +507,6 @@ const Checkout = () => {
                   </span>
                 </div>
 
-                {/* عرض تحذير إذا كانت الولاية معطلة */}
                 {selectedWilaya && !selectedWilaya.isActive && (
                   <div className="p-2 bg-red-50 border border-red-200 rounded-lg">
                     <p className="text-red-600 text-xs text-center">

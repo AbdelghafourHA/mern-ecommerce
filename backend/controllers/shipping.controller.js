@@ -29,6 +29,7 @@ export const createShipping = async (req, res) => {
       wilayaName,
       officePrice,
       homePrice,
+      isActive: true,
     });
 
     res.status(201).json(shipping);

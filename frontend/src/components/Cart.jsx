@@ -11,79 +11,55 @@ const Cart = () => {
     useCartStore();
 
   useEffect(() => {
-    loadCart(); // تحميل الكارت من الـ LocalStorage عند البداية
+    loadCart();
   }, [loadCart]);
 
-  const formatPrice = (price) => `${price.toLocaleString("fr-FR")} DA`;
+  const formatPrice = (price) => {
+    const safe = Number(price);
+    if (isNaN(safe)) return "0 DA";
+    return `${safe.toLocaleString("fr-FR")} DA`;
+  };
 
-  // Function to get the correct price for a cart item
-  const getCartItemPrice = (item) => {
-    // For decants
-    if (item.category === "Decants") {
-      // Check if we have a discounted price for the selected volume
-      if (
-        item.discount > 0 &&
-        item.discountedVolumePricing &&
-        item.selectedSize
-      ) {
-        // Try to get discounted price from discountedVolumePricing
-        let discountedVolumePricing = {};
-        if (
-          item.discountedVolumePricing instanceof Map ||
-          item.discountedVolumePricing[Symbol.iterator]
-        ) {
-          try {
-            discountedVolumePricing = Object.fromEntries(
-              item.discountedVolumePricing
-            );
-          } catch {
-            discountedVolumePricing = {};
-          }
-        } else {
-          discountedVolumePricing = item.discountedVolumePricing || {};
-        }
+  const getOriginalPrice = (item) => {
+    // Decants
+    if (
+      item.category === "Decants" &&
+      item.selectedSize &&
+      item.volumePricing
+    ) {
+      try {
+        const volumes = Array.isArray(item.volumePricing)
+          ? Object.fromEntries(item.volumePricing)
+          : item.volumePricing;
 
-        const discountedPrice = discountedVolumePricing[item.selectedSize];
-        if (discountedPrice) {
-          return discountedPrice;
-        }
+        return Number(volumes[item.selectedSize]) || Number(item.price) || 0;
+      } catch {
+        return Number(item.price) || 0;
       }
-
-      // Fallback: use volume price and apply discount
-      let volumePricing = {};
-      if (
-        item.volumePricing instanceof Map ||
-        item.volumePricing[Symbol.iterator]
-      ) {
-        try {
-          volumePricing = Object.fromEntries(item.volumePricing);
-        } catch {
-          volumePricing = {};
-        }
-      } else {
-        volumePricing = item.volumePricing || {};
-      }
-
-      const volumePrice = volumePricing[item.selectedSize] || item.price;
-      return item.discount > 0
-        ? Math.round(volumePrice * (1 - item.discount / 100))
-        : volumePrice;
     }
 
-    // For regular products
-    return item.discount > 0
-      ? item.newPrice > 0
-        ? item.newPrice
-        : Math.round(item.price * (1 - item.discount / 100))
-      : item.price;
+    return Number(item.originalPrice || item.price) || 0;
+  };
+
+  const getFinalPrice = (item) => {
+    const basePrice = getOriginalPrice(item);
+
+    if (item.fixedDiscount > 0) {
+      return Math.max(basePrice - item.fixedDiscount, 0);
+    }
+
+    if (item.discount > 0) {
+      return Math.round(basePrice * (1 - item.discount / 100));
+    }
+
+    return basePrice;
   };
 
   // Calculate total using the correct price for each item
   const total = cart.reduce((sum, item) => {
-    const itemPrice = getCartItemPrice(item);
-    return sum + itemPrice * item.quantity;
+    const price = getFinalPrice(item);
+    return sum + price * item.quantity;
   }, 0);
-
   return (
     <AnimatePresence>
       {isCartOpen && (
@@ -167,7 +143,7 @@ const Cart = () => {
                   <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
                     <AnimatePresence>
                       {cart.map((item) => {
-                        const itemPrice = getCartItemPrice(item);
+                        const itemPrice = getFinalPrice(item);
 
                         return (
                           <motion.div
@@ -207,39 +183,10 @@ const Cart = () => {
                                     <span className="text-base sm:text-lg font-bold text-secondary font-p01">
                                       {formatPrice(itemPrice)}
                                     </span>
-                                    {item.discount > 0 && (
+                                    {(item.discount > 0 ||
+                                      item.fixedDiscount > 0) && (
                                       <span className="text-xs text-primary/60 line-through">
-                                        {item.category === "Decants" &&
-                                        item.selectedSize
-                                          ? (() => {
-                                              // Get original price before discount
-                                              let volumePricing = {};
-                                              if (
-                                                item.volumePricing instanceof
-                                                  Map ||
-                                                item.volumePricing[
-                                                  Symbol.iterator
-                                                ]
-                                              ) {
-                                                try {
-                                                  volumePricing =
-                                                    Object.fromEntries(
-                                                      item.volumePricing
-                                                    );
-                                                } catch {
-                                                  volumePricing = {};
-                                                }
-                                              } else {
-                                                volumePricing =
-                                                  item.volumePricing || {};
-                                              }
-                                              const originalPrice =
-                                                volumePricing[
-                                                  item.selectedSize
-                                                ] || item.price;
-                                              return formatPrice(originalPrice);
-                                            })()
-                                          : formatPrice(item.price)}
+                                        {formatPrice(getOriginalPrice(item))}
                                       </span>
                                     )}
                                   </div>

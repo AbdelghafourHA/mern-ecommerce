@@ -6,6 +6,47 @@ export const useCartStore = create((set, get) => ({
 
   loadCart: () => {
     let cart = JSON.parse(localStorage.getItem("cart") || "[]");
+
+    cart = cart.map((item) => {
+      // if price already exists, trust it
+      if (typeof item.price === "number" && item.originalPrice) {
+        return item;
+      }
+
+      // ===== Rebuild price for old items =====
+      let basePrice;
+
+      if (item.category === "Decants") {
+        try {
+          const volumePricing = Object.fromEntries(item.volumePricing || []);
+          basePrice =
+            volumePricing[item.selectedSize] ||
+            item.originalPrice ||
+            item.price ||
+            0;
+        } catch {
+          basePrice = item.originalPrice || item.price || 0;
+        }
+      } else {
+        basePrice = item.originalPrice || item.price || 0;
+      }
+
+      let finalPrice = basePrice;
+
+      if (item.fixedDiscount > 0) {
+        finalPrice = Math.max(basePrice - item.fixedDiscount, 0);
+      } else if (item.discount > 0) {
+        finalPrice = Math.round(basePrice * (1 - item.discount / 100));
+      }
+
+      return {
+        ...item,
+        originalPrice: basePrice,
+        price: finalPrice,
+      };
+    });
+
+    localStorage.setItem("cart", JSON.stringify(cart));
     set({ cart });
   },
 

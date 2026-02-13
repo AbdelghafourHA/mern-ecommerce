@@ -38,6 +38,37 @@ const Product = () => {
 
   const { addToCartWithQuantity } = useCartStore();
 
+  const getOriginalPrice = (product, selectedSize) => {
+    if (
+      product.category === "Decants" &&
+      selectedSize &&
+      product.volumePricing
+    ) {
+      try {
+        const volumes = Object.fromEntries(product.volumePricing);
+        return Number(volumes[selectedSize]) || Number(product.price) || 0;
+      } catch {
+        return Number(product.price) || 0;
+      }
+    }
+
+    return Number(product.price) || 0;
+  };
+
+  const getFinalPrice = (product, selectedSize) => {
+    const base = getOriginalPrice(product, selectedSize);
+
+    if (product.fixedDiscount > 0) {
+      return Math.max(base - product.fixedDiscount, 0);
+    }
+
+    if (product.discount > 0) {
+      return Math.round(base * (1 - product.discount / 100));
+    }
+
+    return base;
+  };
+
   // Calculate unit price based on selected size and volume pricing
   const calculateUnitPrice = () => {
     if (!product || !product.price) return 0;
@@ -152,35 +183,32 @@ const Product = () => {
   const handleBuyNow = () => {
     if (!product) return;
 
-    // Calculate unit price with discount and size
-    const unitPrice = calculateUnitPrice();
+    const isDecant = product.category === "Decants";
 
-    // Create a temporary cart with ONLY this product and quantity
+    const basePrice = getOriginalPrice(product, selectedSize);
+    const finalPrice = getFinalPrice(product, selectedSize);
+
     const checkoutProduct = {
       ...product,
-      quantity: quantity,
-      unitPrice: unitPrice,
-      selectedSize: product.category === "Decants" ? selectedSize : null,
-      // ADD VOLUME TO THE PRODUCT DATA
-      volume: product.category === "Decants" ? selectedSize : null,
-      // Store the actual price used
-      price: unitPrice,
+      quantity,
+      selectedSize: isDecant ? selectedSize : null,
+      volume: isDecant ? selectedSize : null,
+
+      // prices
+      originalPrice: basePrice,
+      price: finalPrice,
+      fixedDiscount: product.fixedDiscount || 0,
+      discount: product.discount || 0,
     };
 
-    // Calculate total
-    const checkoutTotal = unitPrice * quantity;
-
-    // Save to localStorage for checkout page
     const checkoutData = {
       directCheckout: true,
       product: checkoutProduct,
-      total: checkoutTotal,
+      total: finalPrice * quantity,
       count: quantity,
     };
 
     localStorage.setItem("directCheckout", JSON.stringify(checkoutData));
-
-    // Navigate to checkout
     navigate("/checkout");
   };
 
@@ -188,18 +216,53 @@ const Product = () => {
   const handleAddToCart = () => {
     if (!product) return;
 
-    // Calculate unit price with discount and size
-    const unitPrice = calculateUnitPrice();
+    const isDecant = product.category === "Decants";
 
-    // Prepare product data with size if it's a decant
+    /* =========================
+     1) السعر الأصلي (قبل الخصم)
+  ========================= */
+    let basePrice;
+
+    if (isDecant) {
+      basePrice = getOriginalVolumePrice(selectedSize); // من volumePricing
+    } else {
+      basePrice = product.price;
+    }
+
+    /* =========================
+     2) حساب السعر بعد الخصم
+  ========================= */
+    let finalPrice = basePrice;
+
+    // Fixed price discount
+    if (product.fixedDiscount > 0) {
+      finalPrice = Math.max(basePrice - product.fixedDiscount, 0);
+    }
+    // Percentage discount
+    else if (product.discount > 0) {
+      finalPrice =
+        product.newPrice && !isDecant
+          ? product.newPrice
+          : Math.round(basePrice * (1 - product.discount / 100));
+    }
+
+    /* =========================
+     3) المنتج الذي يدخل للسلة
+  ========================= */
     const productToAdd = {
       ...product,
-      selectedSize: product.category === "Decants" ? selectedSize : null,
-      // ADD VOLUME TO THE CART ITEM
-      volume: product.category === "Decants" ? selectedSize : null,
-      // ADD THE CALCULATED UNIT PRICE
-      originalPrice: getOriginalVolumePrice(selectedSize) || product.price, // Keep original price for reference
-      price: unitPrice, // Use the calculated price based on size
+
+      // For Decants
+      selectedSize: isDecant ? selectedSize : null,
+      volume: isDecant ? selectedSize : null,
+
+      // Prices
+      originalPrice: basePrice, // السعر قبل الخصم
+      price: finalPrice, // السعر بعد الخصم (هو الذي يُحسب في السلة)
+
+      // Keep discounts for UI
+      fixedDiscount: product.fixedDiscount || 0,
+      discount: product.discount || 0,
     };
 
     addToCartWithQuantity(productToAdd, quantity);
@@ -400,6 +463,12 @@ const Product = () => {
                     </span>
                   )}
                 </span>
+
+                {hasDiscount && !isDecant && (
+                  <span className="text-lg sm:text-xl text-primary/60 line-through">
+                    {formatPrice(product.price)}
+                  </span>
+                )}
 
                 {/* Original Price if discounted */}
                 {hasDiscount && isDecant && selectedSize && (

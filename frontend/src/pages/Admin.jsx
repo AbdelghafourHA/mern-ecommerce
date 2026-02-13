@@ -76,7 +76,7 @@ const Admin = () => {
   return (
     <div className="min-h-screen bg-background pt-16">
       {/* Mobile Header */}
-      <div className="lg:hidden bg-primary text-white sticky top-0">
+      <div className="lg:hidden bg-primary text-white fixed top-0 right-0 left-0">
         <div className="flex items-center justify-center p-4">
           <h1 className="text-xl font-bold font-bold01 text-center">
             Dashboard
@@ -116,7 +116,7 @@ const Admin = () => {
         />
       )}
 
-      <div className="lg:flex">
+      <div className="lg:flex mt-12 lg:mt-0">
         {/* Sidebar - Desktop */}
         <div className="hidden lg:flex fixed left-0 top-0 h-full w-64 bg-primary text-white p-6 pt-16">
           <div className="w-full">
@@ -3737,6 +3737,8 @@ const ShippingSettings = () => {
       hasFetchedRef.current = true;
     }
   }, [fetchShipping]);
+
+  console.log("admin:", shipping);
 
   useEffect(() => {
     const checkMobile = () => {

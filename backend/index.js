@@ -81,7 +81,7 @@ app.use("/api/products", productsReadLimiter, productsRoutes);
 app.use("/api/checkout", checkoutLimiter, checkoutRoutes);
 
 // Shipping (admin)
-app.use("/api/shipping", verifyAdmin, shippingRoutes);
+app.use("/api/shipping", shippingRoutes);
 
 // Analytics (admin)
 app.use("/api/analytics", verifyAdmin, analyticsLimiter, analyticsRoutes);
