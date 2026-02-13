@@ -8,7 +8,7 @@ import {
   Facebook,
   Instagram,
 } from "lucide-react";
-import Logo from "../assets/Logo02.png";
+import Logo from "../assets/Logo01.png";
 import { Link } from "react-router-dom";
 
 const Footer = ({ colorBg, colorText }) => {
@@ -56,7 +56,7 @@ const Footer = ({ colorBg, colorText }) => {
               <img
                 src={Logo}
                 alt="Mounir Fragrance"
-                className="h-16 md:h-20 w-auto"
+                className="h-18 md:h-24 w-auto"
               />
             </div>
             <p

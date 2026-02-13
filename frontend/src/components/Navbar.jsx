@@ -146,7 +146,11 @@ const Navbar = () => {
               className="flex-shrink-0"
             >
               <Link to="/">
-                <img src={Logo} alt="Logo" className="h-10 lg:h-14 w-auto" />
+                <img
+                  src={Logo}
+                  alt="Logo"
+                  className="h-14 md:h-16 lg:h-18 w-auto"
+                />
               </Link>
             </motion.div>
 
@@ -304,7 +308,7 @@ const Navbar = () => {
               <div className="p-6 h-full flex flex-col">
                 {/* Mobile Header with Close Button */}
                 <div className="flex justify-between items-center mb-16">
-                  <img src={Logo} alt="Logo" className="h-10" />
+                  <img src={Logo} alt="Logo" className="h-16" />
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}

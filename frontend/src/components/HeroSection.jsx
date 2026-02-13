@@ -14,7 +14,7 @@ const HeroSection = () => {
   // Slide content in French with corresponding routes
   const slideContents = [
     {
-      title: "Mounir Fragrance",
+      title: "Lusso",
       description: "Une collection qui incarne le luxe et la sophistication.",
       buttonText: "Explorer la Collection",
       buttonLink: "/products", // Main products page
