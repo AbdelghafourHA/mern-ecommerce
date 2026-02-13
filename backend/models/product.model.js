@@ -59,6 +59,10 @@ const productSchema = new mongoose.Schema(
       of: Number,
       default: {},
     },
+    fixedDiscount: {
+      type: Number,
+      default: 0,
+    },
     availableSizes: {
       type: [String],
       default: ["10ml", "20ml", "30ml"], // Default sizes for decants

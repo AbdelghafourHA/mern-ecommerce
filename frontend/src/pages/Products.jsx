@@ -45,11 +45,15 @@ const Products = () => {
   }, [filters, pagination.currentPage, getAllProducts]);
 
   const calculateFinalPrice = (product) => {
-    return product.discount > 0
-      ? product.newPrice > 0
-        ? product.newPrice
-        : Math.round(product.price * (1 - product.discount / 100))
-      : product.price;
+    if (product.fixedDiscount > 0) {
+      return Math.max(product.price - product.fixedDiscount, 0);
+    }
+
+    if (product.discount > 0) {
+      return Math.round(product.price * (1 - product.discount / 100));
+    }
+
+    return product.price;
   };
 
   const categories = [
@@ -459,29 +463,27 @@ const Products = () => {
   );
 };
 
-// Product Card (updated with responsive design for 2 items per row)
 const ProductCard = ({ product, formatPrice, calculateFinalPrice }) => {
   const { addToCart } = useCartStore();
 
   const finalPrice = calculateFinalPrice(product);
-  const hasDiscount = product.discount > 0;
 
-  // Function to handle adding decant to cart with default volume
+  const hasPercentDiscount = product.discount > 0;
+  const hasFixedDiscount = product.fixedDiscount > 0;
+
+  const hasDiscount = hasPercentDiscount || hasFixedDiscount;
+
   const handleAddToCart = () => {
     if (product.category === "Decants") {
-      // Get default volume from product data
       const defaultVolume = product.defaultVolume || "10ml";
 
-      // Create a new object with the decant data plus volume information
       const decantWithVolume = {
         ...product,
         volume: defaultVolume, // Use default volume from product
-        // If volume pricing exists, use the price for the default volume
         price: product.volumePricing?.[defaultVolume] || finalPrice,
       };
       addToCart(decantWithVolume);
     } else {
-      // For non-decant products, add normally
       addToCart(product);
     }
   };
@@ -525,7 +527,9 @@ const ProductCard = ({ product, formatPrice, calculateFinalPrice }) => {
           {/* Discount Badge - Responsive size */}
           {hasDiscount && (
             <div className="absolute top-10 left-2 bg-red-500 text-white px-2 py-1 rounded-full text-[10px] sm:text-xs font-bold">
-              -{product.discount}%
+              {hasPercentDiscount
+                ? `-${product.discount}%`
+                : `-${formatPrice(product.fixedDiscount)}`}
             </div>
           )}
 

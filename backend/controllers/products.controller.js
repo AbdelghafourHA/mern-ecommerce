@@ -374,65 +374,40 @@ export const getProductById = async (req, res) => {
 export const updateProductDiscount = async (req, res) => {
   try {
     const { productId } = req.params;
-    const { discount } = req.body;
+    const { fixedDiscount } = req.body;
 
-    if (discount < 0 || discount > 100) {
-      return res.status(400).json({
-        message: "Le discount doit être entre 0 et 100",
-      });
+    if (fixedDiscount < 0) {
+      return res.status(400).json({ message: "Invalid discount" });
     }
 
     const product = await Product.findById(productId);
+    if (!product) return res.status(404).json({ message: "Not found" });
 
-    if (!product) {
-      return res.status(404).json({ message: "Produit non trouvé" });
-    }
+    const newPrice = Math.max(product.price - fixedDiscount, 0);
 
     let updateData = {
-      discount,
+      fixedDiscount,
+      newPrice,
+      discount: 0,
     };
 
-    // For decants, apply discount to all volume prices
-    if (product.category === "Decants") {
-      // Calculate discounted base price (10ml)
-      const discountedBasePrice =
-        discount > 0
-          ? Math.round(product.price * (1 - discount / 100))
-          : product.price;
+    // Decants
+    if (product.category === "Decants" && product.volumePricing) {
+      const discountedVolumePricing = new Map();
 
-      updateData.newPrice = discountedBasePrice;
-
-      // Calculate discounted prices for all volumes
-      if (product.volumePricing && product.volumePricing.size > 0) {
-        const discountedVolumePricing = new Map();
-
-        for (const [volume, price] of product.volumePricing.entries()) {
-          const discountedPrice =
-            discount > 0 ? Math.round(price * (1 - discount / 100)) : price;
-          discountedVolumePricing.set(volume, discountedPrice);
-        }
-
-        updateData.discountedVolumePricing = discountedVolumePricing;
+      for (const [vol, price] of product.volumePricing.entries()) {
+        discountedVolumePricing.set(vol, Math.max(price - fixedDiscount, 0));
       }
-    } else {
-      // For regular products
-      const newPrice =
-        discount > 0
-          ? Math.round(product.price * (1 - discount / 100))
-          : product.price;
-      updateData.newPrice = newPrice;
+
+      updateData.discountedVolumePricing = discountedVolumePricing;
     }
 
-    const updatedProduct = await Product.findByIdAndUpdate(
-      productId,
-      updateData,
-      { new: true }
-    );
-
-    res.json(updatedProduct);
-  } catch (error) {
-    console.error("Error updating product discount:", error);
-    res.status(500).json({ message: "Erreur du serveur" });
+    const updated = await Product.findByIdAndUpdate(productId, updateData, {
+      new: true,
+    });
+    res.json(updated);
+  } catch (e) {
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -532,130 +507,74 @@ export const applyDiscountToAll = async (req, res) => {
   try {
     const { discount, categories } = req.body;
 
-    if (discount < 0 || discount > 100) {
-      return res.status(400).json({
-        message: "Le discount doit être entre 0 et 100",
-      });
-    }
-
     let query = {};
-    if (categories && categories.length > 0) {
-      query.category = { $in: categories };
-    }
+    if (categories?.length) query.category = { $in: categories };
 
     const products = await Product.find(query);
 
-    if (products.length === 0) {
-      return res.status(404).json({ message: "Aucun produit trouvé" });
-    }
+    const ops = products.map((p) => {
+      const newPrice = Math.round(p.price * (1 - discount / 100));
 
-    const updateOperations = products.map((product) => {
-      const updateData = {
+      let update = {
         discount,
+        fixedDiscount: 0,
+        newPrice,
       };
 
-      if (product.category === "Decants") {
-        // Apply discount to base price
-        updateData.newPrice =
-          discount > 0
-            ? Math.round(product.price * (1 - discount / 100))
-            : product.price;
-
-        // Apply discount to all volume prices
-        if (product.volumePricing && product.volumePricing.size > 0) {
-          const discountedVolumePricing = new Map();
-
-          for (const [volume, price] of product.volumePricing.entries()) {
-            const discountedPrice =
-              discount > 0 ? Math.round(price * (1 - discount / 100)) : price;
-            discountedVolumePricing.set(volume, discountedPrice);
-          }
-
-          updateData.discountedVolumePricing = discountedVolumePricing;
+      if (p.category === "Decants" && p.volumePricing) {
+        const map = new Map();
+        for (const [v, price] of p.volumePricing.entries()) {
+          map.set(v, Math.round(price * (1 - discount / 100)));
         }
-      } else {
-        // Regular products
-        updateData.newPrice =
-          discount > 0
-            ? Math.round(product.price * (1 - discount / 100))
-            : product.price;
+        update.discountedVolumePricing = map;
       }
 
       return {
         updateOne: {
-          filter: { _id: product._id },
-          update: { $set: updateData },
+          filter: { _id: p._id },
+          update: { $set: update },
         },
       };
     });
 
-    await Product.bulkWrite(updateOperations);
-
-    const updatedProducts = await Product.find(query);
-
-    res.json({
-      message: `Discount of ${discount}% applied to ${updatedProducts.length} products`,
-      products: updatedProducts,
-    });
-  } catch (error) {
-    console.error("Error applying discount to all products:", error);
-    res.status(500).json({ message: "Erreur du serveur" });
+    await Product.bulkWrite(ops);
+    const updated = await Product.find(query);
+    res.json({ products: updated });
+  } catch (e) {
+    res.status(500).json({ message: "Server error" });
   }
 };
 
 export const removeDiscountFromAll = async (req, res) => {
   try {
     const { categories } = req.body;
-
-    let query = { discount: { $gt: 0 } };
-    if (categories && categories.length > 0) {
-      query.category = { $in: categories };
-    }
+    let query = {};
+    if (categories?.length) query.category = { $in: categories };
 
     const products = await Product.find(query);
 
-    if (products.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "Aucun produit avec discount trouvé" });
-    }
-
-    const updateOperations = products.map((product) => {
-      const updateData = {
-        discount: 0,
-        newPrice: product.price,
-      };
-
-      // For decants, reset discounted volume pricing
-      if (product.category === "Decants") {
-        updateData.discountedVolumePricing = new Map();
-      }
-
-      return {
-        updateOne: {
-          filter: { _id: product._id },
-          update: { $set: updateData },
+    const ops = products.map((p) => ({
+      updateOne: {
+        filter: { _id: p._id },
+        update: {
+          $set: {
+            discount: 0,
+            fixedDiscount: 0,
+            newPrice: p.price,
+            discountedVolumePricing: new Map(),
+          },
         },
-      };
-    });
+      },
+    }));
 
-    await Product.bulkWrite(updateOperations);
-
-    const updatedProducts = await Product.find({
-      _id: { $in: products.map((p) => p._id) },
-    });
-
-    res.json({
-      message: `Discount removed from ${updatedProducts.length} products`,
-      products: updatedProducts,
-    });
-  } catch (error) {
-    console.error("Error removing discount from all products:", error);
-    res.status(500).json({ message: "Erreur du serveur" });
+    await Product.bulkWrite(ops);
+    const updated = await Product.find(query);
+    res.json({ products: updated });
+  } catch (e) {
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// Get price for specific volume
 export const getVolumePrice = async (req, res) => {
   try {
     const { productId, volume } = req.params;

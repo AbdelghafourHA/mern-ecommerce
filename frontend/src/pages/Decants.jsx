@@ -38,11 +38,15 @@ const Decants = () => {
   }, [filters, pagination.currentPage, getProductsByCategory]);
 
   const calculateFinalPrice = (product) => {
-    return product.discount > 0
-      ? product.newPrice > 0
-        ? product.newPrice
-        : Math.round(product.price * (1 - product.discount / 100))
-      : product.price;
+    if (product.fixedDiscount > 0) {
+      return Math.max(product.price - product.fixedDiscount, 0);
+    }
+
+    if (product.discount > 0) {
+      return Math.round(product.price * (1 - product.discount / 100));
+    }
+
+    return product.price;
   };
 
   const genders = [
@@ -433,7 +437,11 @@ const ProductCard = ({ product, formatPrice, calculateFinalPrice }) => {
   const { addToCart } = useCartStore();
 
   const finalPrice = calculateFinalPrice(product);
-  const hasDiscount = product.discount > 0;
+
+  const hasPercentDiscount = product.discount > 0;
+  const hasFixedDiscount = product.fixedDiscount > 0;
+
+  const hasDiscount = hasPercentDiscount || hasFixedDiscount;
 
   // Function to handle adding decant to cart with default volume
   const handleAddToCart = () => {
@@ -488,7 +496,9 @@ const ProductCard = ({ product, formatPrice, calculateFinalPrice }) => {
           {/* Discount Badge - Responsive size */}
           {hasDiscount && (
             <div className="absolute top-10 left-2 bg-red-500 text-white px-2 py-1 rounded-full text-[10px] sm:text-xs font-bold">
-              -{product.discount}%
+              {hasPercentDiscount
+                ? `-${product.discount}%`
+                : `-${formatPrice(product.fixedDiscount)}`}
             </div>
           )}
         </div>

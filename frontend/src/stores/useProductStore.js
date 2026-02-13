@@ -271,27 +271,18 @@ export const useProductStore = create((set, get) => ({
     }
   },
 
-  productDiscount: async (productId, discount) => {
-    try {
-      const response = await api.put(`/products/${productId}/discount`, {
-        discount,
-      });
+  productDiscount: async (productId, fixedDiscount) => {
+    const res = await api.put(`/products/${productId}/discount`, {
+      fixedDiscount,
+    });
 
-      const updatedProduct = response.data;
+    set((state) => ({
+      products: state.products.map((p) =>
+        p._id === res.data._id ? res.data : p
+      ),
+    }));
 
-      set((state) => ({
-        products: state.products.map((product) =>
-          product._id === updatedProduct._id ? updatedProduct : product
-        ),
-      }));
-
-      toast.success("Discount mis à jour avec succès!");
-      return updatedProduct;
-    } catch (error) {
-      console.error("Error updating product discount:", error);
-      toast.error("Erreur lors de la mise à jour du discount");
-      throw error;
-    }
+    return res.data;
   },
 
   updateProductPricing: async (productId, price, discount) => {

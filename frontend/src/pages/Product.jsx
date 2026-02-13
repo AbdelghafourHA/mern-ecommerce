@@ -42,15 +42,19 @@ const Product = () => {
   const calculateUnitPrice = () => {
     if (!product || !product.price) return 0;
 
-    // For decants with selected size
+    // Decants
     if (product.category === "Decants" && selectedSize) {
       return getVolumePrice(selectedSize);
     }
 
-    // For regular products or decants without size selection
     let price = product.price;
 
-    // Apply discount if any
+    // Fixed price discount
+    if (product.fixedDiscount > 0) {
+      return Math.max(price - product.fixedDiscount, 0);
+    }
+
+    // Percent discount
     if (product.discount > 0) {
       return product.newPrice > 0
         ? product.newPrice
@@ -102,7 +106,12 @@ const Product = () => {
 
     const volumePrice = volumePricing[size];
 
-    // If discount exists and we have discounted price, use it
+    // If fixed price discount applied on decants
+    if (product.fixedDiscount > 0 && volumePrice) {
+      return Math.max(volumePrice - product.fixedDiscount, 0);
+    }
+
+    // If percentage discount exists and we have discounted price
     if (product.discount > 0 && discountedVolumePricing[size]) {
       return discountedVolumePricing[size];
     }
@@ -260,7 +269,9 @@ const Product = () => {
 
   const unitPrice = calculateUnitPrice();
   const totalPrice = calculateTotalPrice();
-  const hasDiscount = product.discount > 0;
+  const hasPercentDiscount = product.discount > 0;
+  const hasFixedDiscount = product.fixedDiscount > 0;
+  const hasDiscount = hasPercentDiscount || hasFixedDiscount;
   const isDecant = product.category === "Decants";
   const availableSizes = getAvailableSizes();
 
@@ -334,7 +345,9 @@ const Product = () => {
               )}
               {hasDiscount && (
                 <span className="bg-red-500 text-white px-3 py-1 rounded-full text-xs sm:text-sm font-bold">
-                  -{product.discount}%
+                  {hasPercentDiscount
+                    ? `-${product.discount}%`
+                    : `-${formatPrice(product.fixedDiscount)}`}
                 </span>
               )}
             </div>
@@ -402,7 +415,11 @@ const Product = () => {
                 <div className="bg-accent/10 p-3 sm:p-4 rounded-xl border border-accent/20">
                   <p className="text-sm sm:text-base text-primary/70">
                     <span className="font-semibold">
-                      Remise de {product.discount}% appliquée
+                      {hasPercentDiscount
+                        ? `Remise de ${product.discount}% appliquée`
+                        : `Remise de ${formatPrice(
+                            product.fixedDiscount
+                          )} appliquée`}
                     </span>{" "}
                     sur toutes les tailles.
                     {selectedSize && (

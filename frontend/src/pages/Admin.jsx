@@ -211,7 +211,6 @@ const ProductsManager = ({ formatPrice }) => {
   const [applyingBulkDiscount, setApplyingBulkDiscount] = useState(false);
   const [isBulkDiscountOpen, setIsBulkDiscountOpen] = useState(false);
   const searchTimeout = useRef(null);
-  const [localDiscounts, setLocalDiscounts] = useState({});
 
   const {
     products,
@@ -241,25 +240,6 @@ const ProductsManager = ({ formatPrice }) => {
     filters.sort,
   ]);
 
-  const getBasePrice = (product) => {
-    if (product.category === "Decants" && product.volumePricing) {
-      const map =
-        product.volumePricing instanceof Map
-          ? Object.fromEntries(product.volumePricing)
-          : product.volumePricing;
-
-      const volume = product.defaultVolume || "10ml";
-      return map?.[volume] || product.price;
-    }
-
-    return product.price;
-  };
-
-  const priceToPercent = (basePrice, discountDA) => {
-    if (!basePrice || basePrice <= 0) return 0;
-    return Math.min(100, Math.round((discountDA / basePrice) * 100));
-  };
-
   const handleSearch = (e) => {
     const value = e.target.value;
 
@@ -280,28 +260,45 @@ const ProductsManager = ({ formatPrice }) => {
     ...new Set(products.map((p) => p.category).filter(Boolean)),
   ];
 
-  const handleDiscountChange = async (productId, discountDA) => {
-    try {
-      const product = products.find((p) => p._id === productId);
-      if (!product) return;
+  const handleDiscountChange = async (productId, value) => {
+    await productDiscount(productId, value);
+  };
 
-      const basePrice = getBasePrice(product);
-      const percent = priceToPercent(basePrice, discountDA);
+  const getDisplayPrice = (product) => {
+    if (product.category === "Decants" && product.volumePricing) {
+      let volumePricing;
+      if (
+        product.volumePricing instanceof Map ||
+        product.volumePricing[Symbol.iterator]
+      ) {
+        try {
+          volumePricing = Object.fromEntries(product.volumePricing);
+        } catch {
+          volumePricing = {};
+        }
+      } else {
+        volumePricing = product.volumePricing || {};
+      }
 
-      await productDiscount(productId, percent);
-    } catch (err) {
-      console.error(err);
+      const defaultVolume = product.defaultVolume || "10ml";
+      const volumePrice = volumePricing[defaultVolume];
+
+      if (volumePrice !== undefined) {
+        return volumePrice;
+      }
     }
+
+    return product.price;
   };
 
   const getFinalPrice = (product) => {
-    const basePrice = getBasePrice(product);
+    const displayPrice = getDisplayPrice(product);
 
-    if (product.discount > 0) {
-      return Math.round(basePrice * (1 - product.discount / 100));
+    if (product.fixedDiscount > 0 || product.discount > 0) {
+      return Math.round(displayPrice * (1 - product.discount / 100));
     }
 
-    return basePrice;
+    return displayPrice;
   };
 
   const handleBulkDiscount = async () => {
@@ -640,9 +637,9 @@ const ProductsManager = ({ formatPrice }) => {
                   </thead>
                   <tbody>
                     {products.map((product) => {
-                      const basePrice = getBasePrice(product);
-                      const finalPrice = getFinalPrice(product);
-                      const savings = basePrice - finalPrice;
+                      const displayPrice = getDisplayPrice(product);
+                      const finalPrice = product.newPrice || displayPrice;
+                      const savings = displayPrice - finalPrice;
 
                       return (
                         <tr
@@ -692,7 +689,7 @@ const ProductsManager = ({ formatPrice }) => {
                           </td>
                           <td className="py-3 px-4">
                             <div className="font-semibold text-primary font-p01 text-sm">
-                              {formatPrice(basePrice)}
+                              {formatPrice(displayPrice)}
                               {product.category === "Decants" && (
                                 <span className="text-xs text-primary/60 block">
                                   {product.defaultVolume || "10ml"}
@@ -705,46 +702,17 @@ const ProductsManager = ({ formatPrice }) => {
                               <input
                                 type="number"
                                 min="0"
-                                max={basePrice}
-                                value={
-                                  localDiscounts[product._id] !== undefined
-                                    ? localDiscounts[product._id]
-                                    : product.discount
-                                    ? Math.round(
-                                        (basePrice * product.discount) / 100
-                                      )
-                                    : 0
+                                max="100"
+                                value={product.fixedDiscount || 0}
+                                onChange={(e) =>
+                                  handleDiscountChange(
+                                    product._id,
+                                    parseInt(e.target.value) || 0
+                                  )
                                 }
-                                onChange={(e) => {
-                                  const value = parseInt(e.target.value) || 0;
-
-                                  setLocalDiscounts((prev) => ({
-                                    ...prev,
-                                    [product._id]: value,
-                                  }));
-                                }}
-                                onBlur={() => {
-                                  const value =
-                                    localDiscounts[product._id] || 0;
-                                  if (value >= 0) {
-                                    handleDiscountChange(product._id, value);
-                                  }
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    const value =
-                                      localDiscounts[product._id] || 0;
-                                    if (value >= 0) {
-                                      handleDiscountChange(product._id, value);
-                                      e.currentTarget.blur();
-                                    }
-                                  }
-                                }}
                                 className="w-14 p-2 border border-primary/20 rounded-lg text-center text-sm focus:outline-none focus:border-secondary"
                               />
-                              <span className="text-primary/60 text-xs">
-                                DA
-                              </span>
+                              <span className="text-primary/60 text-xs">%</span>
                             </div>
                           </td>
                           <td className="py-3 px-4">
@@ -842,9 +810,9 @@ const ProductsManager = ({ formatPrice }) => {
                 </div>
               ) : (
                 products.map((product) => {
-                  const basePrice = getBasePrice(product);
-                  const finalPrice = getFinalPrice(product);
-                  const savings = basePrice - finalPrice;
+                  const displayPrice = getDisplayPrice(product);
+                  const finalPrice = product.newPrice || displayPrice;
+                  const savings = displayPrice - finalPrice;
 
                   return (
                     <div
@@ -896,7 +864,7 @@ const ProductsManager = ({ formatPrice }) => {
                               : "Prix Original"}
                           </p>
                           <p className="font-semibold text-primary text-sm">
-                            {formatPrice(basePrice)}
+                            {formatPrice(displayPrice)}
                             {product.category === "Decants" && (
                               <span className="block text-xs text-primary/60">
                                 {product.defaultVolume || "10ml"}
@@ -933,42 +901,17 @@ const ProductsManager = ({ formatPrice }) => {
                           <input
                             type="number"
                             min="0"
-                            max={basePrice}
-                            value={
-                              localDiscounts[product._id] !== undefined
-                                ? localDiscounts[product._id]
-                                : product.discount
-                                ? Math.round(
-                                    (basePrice * product.discount) / 100
-                                  )
-                                : 0
+                            max="100"
+                            value={product.fixedDiscount || 0}
+                            onChange={(e) =>
+                              handleDiscountChange(
+                                product._id,
+                                parseInt(e.target.value) || 0
+                              )
                             }
-                            onChange={(e) => {
-                              const value = parseInt(e.target.value) || 0;
-
-                              setLocalDiscounts((prev) => ({
-                                ...prev,
-                                [product._id]: value,
-                              }));
-                            }}
-                            onBlur={() => {
-                              const value = localDiscounts[product._id] || 0;
-                              if (value >= 0) {
-                                handleDiscountChange(product._id, value);
-                              }
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                const value = localDiscounts[product._id] || 0;
-                                if (value >= 0) {
-                                  handleDiscountChange(product._id, value);
-                                  e.currentTarget.blur();
-                                }
-                              }
-                            }}
                             className="w-14 p-1 border border-primary/20 rounded text-center text-xs focus:outline-none focus:border-secondary"
                           />
-                          <span className="text-primary/60 text-xs">DA</span>
+                          <span className="text-primary/60 text-xs">%</span>
                         </div>
 
                         <div className="flex items-center space-x-2">
