@@ -712,7 +712,9 @@ const ProductsManager = ({ formatPrice }) => {
                                 }
                                 className="w-14 p-2 border border-primary/20 rounded-lg text-center text-sm focus:outline-none focus:border-secondary"
                               />
-                              <span className="text-primary/60 text-xs">%</span>
+                              <span className="text-primary/60 text-xs">
+                                DA
+                              </span>
                             </div>
                           </td>
                           <td className="py-3 px-4">
