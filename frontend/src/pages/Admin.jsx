@@ -913,7 +913,7 @@ const ProductsManager = ({ formatPrice }) => {
                             }
                             className="w-14 p-1 border border-primary/20 rounded text-center text-xs focus:outline-none focus:border-secondary"
                           />
-                          <span className="text-primary/60 text-xs">%</span>
+                          <span className="text-primary/60 text-xs">DA</span>
                         </div>
 
                         <div className="flex items-center space-x-2">
