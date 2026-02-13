@@ -76,7 +76,7 @@ const Admin = () => {
   return (
     <div className="min-h-screen bg-background pt-16">
       {/* Mobile Header */}
-      <div className="lg:hidden bg-primary text-white sticky top-0">
+      <div className="lg:hidden bg-primary text-white fixed top-0">
         <div className="flex items-center justify-center p-4">
           <h1 className="text-xl font-bold font-bold01 text-center">
             Dashboard
