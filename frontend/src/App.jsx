@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 import Home from "./pages/Home.jsx";
 import Navbar from "./components/Navbar.jsx";
 import Products from "./pages/Products.jsx";
@@ -28,22 +28,22 @@ const App = () => {
   const [data, setData] = useState([]);
 
   useEffect(() => {
-    fetch(`${config.API_URL}/api/products`)
+    fetch(`${config.API_URL}/products`)
       .then((res) => res.json())
       .then((data) => {
         console.log("connected", data);
         setData(data);
       })
       .catch((err) => console.error("error:", err));
-  });
-
-  useEffect(() => {
-    fetch(import.meta.env.VITE_API_URL + "/health").catch(() => {});
   }, []);
 
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
+
+  useEffect(() => {
+    fetch(import.meta.env.VITE_API_URL + "/health").catch(() => {});
+  }, []);
 
   if (checkingAuth) return <LoadingSpinner />;
 
