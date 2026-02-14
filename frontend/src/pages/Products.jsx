@@ -120,7 +120,11 @@ const Products = () => {
 
   const goToPage = (page) => {
     setPage(page);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    setTimeout(() => {
+      document.body.scrollTop = 0;
+      document.documentElement.scrollTop = 0;
+    }, 50);
   };
 
   return (

@@ -168,7 +168,16 @@ const Cart = () => {
                                   {item.title}
                                 </h3>
                                 <p className="text-primary/60 text-xs font-bold01 capitalize mb-2">
-                                  {item.gender} • {item.category}
+                                  {Array.isArray(item.gender) &&
+                                  item.gender.length > 1
+                                    ? "Unisexe"
+                                    : Array.isArray(item.gender) &&
+                                      item.gender.length === 1
+                                    ? item.gender[0]
+                                    : Array.isArray(item.gender)
+                                    ? item.gender.join(", ")
+                                    : item.gender}{" "}
+                                  • {item.category}
                                   {/* Display volume if it exists */}
                                   {(item.selectedSize || item.volume) && (
                                     <span className="ml-2 bg-secondary/20 text-secondary px-2 py-0.5 rounded text-xs font-semibold">
