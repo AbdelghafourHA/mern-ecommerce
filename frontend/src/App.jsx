@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import Home from "./pages/Home.jsx";
 import Navbar from "./components/Navbar.jsx";
@@ -19,11 +19,23 @@ import LoadingSpinner from "./components/LoadingSpinner";
 import ScrollToTopButton from "./components/ScrollToTopButton.jsx";
 import ScrollProgressBar from "./components/ScrollProgressBar .jsx";
 import Decants from "./pages/Decants.jsx";
+import config from "./config.js";
 
 const App = () => {
   const location = useLocation();
   const isAdminPage = location.pathname.startsWith("/admin");
   const { user, checkAuth, checkingAuth } = useAdminStore();
+  const [data, setData] = useState([]);
+
+  useEffect(() => {
+    fetch(`${config.API_URL}/api/products`)
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("connected", data);
+        setData(data);
+      })
+      .catch((err) => console.error("error:", err));
+  });
 
   useEffect(() => {
     fetch(import.meta.env.VITE_API_URL + "/health").catch(() => {});
