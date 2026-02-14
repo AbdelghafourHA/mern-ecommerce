@@ -243,7 +243,7 @@ const Navbar = () => {
               </Link>
 
               {/* Dashboard */}
-              <Link to="/admin">
+              {/* <Link to="/admin">
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
@@ -251,7 +251,7 @@ const Navbar = () => {
                 >
                   <LayoutDashboard size={22} />
                 </motion.button>
-              </Link>
+              </Link> */}
 
               {/* Cart */}
               <motion.button
