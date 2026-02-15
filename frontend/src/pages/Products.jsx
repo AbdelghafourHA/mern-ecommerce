@@ -30,10 +30,6 @@ const Products = () => {
 
   useEffect(() => {
     setFilter("category", "all");
-    setPage(1);
-  }, []);
-
-  useEffect(() => {
     setFilter("gender", "all");
     setFilter("maxPrice", null);
     setFilter("sort", "newest");

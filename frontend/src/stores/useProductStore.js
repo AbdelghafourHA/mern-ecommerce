@@ -130,12 +130,22 @@ export const useProductStore = create((set, get) => ({
 
   getProductsByCategory: async (category) => {
     const { filters, pagination } = get();
+
+    if (filters.category !== category) {
+      set((state) => ({
+        filters: { ...state.filters, category },
+        pagination: { ...state.pagination, currentPage: 1 },
+      }));
+    }
+
+    const page = filters.category !== category ? 1 : pagination.currentPage;
+
     set({ loading: true });
 
     try {
       const res = await api.get(`/products/category/${category}`, {
         params: {
-          page: pagination.currentPage,
+          page,
           limit: pagination.limit,
           gender: filters.gender !== "all" ? filters.gender : undefined,
           maxPrice: filters.maxPrice || undefined,
@@ -149,6 +159,7 @@ export const useProductStore = create((set, get) => ({
         pagination: {
           ...pagination,
           ...res.data.pagination,
+          currentPage: page,
         },
         loading: false,
       });
