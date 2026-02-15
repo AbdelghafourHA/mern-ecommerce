@@ -55,8 +55,8 @@ const Footer = ({ colorBg, colorText }) => {
             <div className="flex justify-center md:justify-start mb-4 md:mb-6">
               <img
                 src={Logo}
-                alt="Mounir Fragrance"
-                className="h-18 md:h-24 w-auto"
+                alt="Lusso"
+                className="h-20 md:h-24 lg:h-26 w-auto mix-blend-difference"
               />
             </div>
             <p
@@ -211,7 +211,7 @@ const Footer = ({ colorBg, colorText }) => {
           className={`border-t border-${colorText}/20 mt-6 md:mt-8 pt-6 md:pt-8 text-center`}
         >
           <p className={`text-${colorText} text-xs md:text-sm`}>
-            © {new Date().getFullYear()} Mounir Fragrance. Tous droits réservés.
+            © {new Date().getFullYear()} Lusso. Tous droits réservés.
           </p>
         </motion.div>
       </div>
