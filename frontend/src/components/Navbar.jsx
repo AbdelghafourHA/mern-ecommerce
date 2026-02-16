@@ -308,7 +308,11 @@ const Navbar = () => {
               <div className="p-6 h-full flex flex-col">
                 {/* Mobile Header with Close Button */}
                 <div className="flex justify-between items-center mb-16">
-                  <img src={Logo} alt="Logo" className="h-16" />
+                  <img
+                    src={Logo}
+                    alt="Logo"
+                    className="h-16 mix-blend-difference"
+                  />
                   <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
