@@ -5,10 +5,9 @@ import {
   getCheckoutAnalytics,
   getAllAnalytics,
 } from "../controllers/analytics.controller.js";
-import { verifyAdmin } from "../middleweres/auth.middleware.js";
 
-router.get("/products", verifyAdmin, getProductsAnalytics);
-router.get("/checkouts", verifyAdmin, getCheckoutAnalytics);
-router.get("/all", verifyAdmin, getAllAnalytics);
+router.get("/products", getProductsAnalytics);
+router.get("/checkouts", getCheckoutAnalytics);
+router.get("/all", getAllAnalytics);
 
 export default router;

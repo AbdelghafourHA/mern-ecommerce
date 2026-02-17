@@ -43,7 +43,7 @@ app.use(express.json({ limit: "1mb" }));
 
 // Auth (login)
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: 15 * 60 * 1000, // 15 minutes
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
@@ -51,14 +51,14 @@ const authLimiter = rateLimit({
 
 // Checkout
 const checkoutLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000,
-  max: 30,
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 10, // 10 orders in 10 minutes
 });
 
 // Products read
 const productsReadLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000,
-  max: 300,
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 100, // 100 requests in 1 minute
 });
 
 // Analytics
