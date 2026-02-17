@@ -27,7 +27,7 @@ app.set("trust proxy", 1);
 ================================ */
 app.use(
   cors({
-    origin: ["https://lussoparfums-dz.com", "https://www.lussoparfums-dz.com"],
+    origin: process.env.FRONTEND_URL,
     credentials: false,
   })
 );
