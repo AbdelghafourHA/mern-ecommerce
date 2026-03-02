@@ -207,6 +207,26 @@ const Products = () => {
           </motion.button>
         </motion.div>
 
+        {/* Search Bar Section */}
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.35 }}
+          className="mb-8"
+        >
+          <SearchPanel
+            onSearch={(searchTerm) => {
+              setFilter("search", searchTerm);
+              setPage(1);
+            }}
+            currentSearch={filters.search}
+            onClear={() => {
+              setFilter("search", "");
+              setPage(1);
+            }}
+          />
+        </motion.div>
+
         {/* Results Counter - Only show when not loading */}
         {!loading && (
           <motion.div
@@ -234,6 +254,23 @@ const Products = () => {
                 ` • Tri par prix ${
                   filters.sort === "price_asc" ? "croissant" : "décroissant"
                 }`}
+            </p>
+          </motion.div>
+        )}
+
+        {/* Search Results Info */}
+        {filters.search && !loading && products.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center mb-4"
+          >
+            <p className="text-primary/60 text-sm">
+              {products.length} résultat{products.length > 1 ? "s" : ""} pour
+              <span className="text-secondary font-semibold">
+                {" "}
+                "{filters.search}"
+              </span>
             </p>
           </motion.div>
         )}
@@ -432,12 +469,16 @@ const Products = () => {
             animate={{ opacity: 1, scale: 1 }}
             className="text-center py-20"
           >
-            <div className="text-6xl mb-4">🔍</div>
+            <div className="text-6xl mb-4">{filters.search ? "🔍" : "📦"}</div>
             <h3 className="text-xl sm:text-2xl font-bold text-primary mb-2">
-              Aucun produit trouvé
+              {filters.search
+                ? "Aucun résultat trouvé"
+                : "Aucun produit trouvé"}
             </h3>
             <p className="text-primary/80 mb-6 text-sm sm:text-base">
-              Essayez d'ajuster vos filtres
+              {filters.search
+                ? `Désolé, aucun produit ne correspond à "${filters.search}"`
+                : "Essayez d'ajuster vos filtres"}
             </p>
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -445,7 +486,9 @@ const Products = () => {
               onClick={resetFilters}
               className="bg-accent text-primary px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 text-sm sm:text-base"
             >
-              Réinitialiser les filtres
+              {filters.search
+                ? "Voir tous les produits"
+                : "Réinitialiser les filtres"}
             </motion.button>
           </motion.div>
         )}
@@ -798,6 +841,126 @@ const FilterSidebar = ({ isOpen, onClose, genders, formatPrice }) => {
         </>
       )}
     </AnimatePresence>
+  );
+};
+
+const SearchPanel = ({ onSearch, currentSearch, onClear }) => {
+  const [searchTerm, setSearchTerm] = useState(currentSearch || "");
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Debounce search to avoid too many requests
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm !== currentSearch) {
+        setIsSearching(false);
+        onSearch(searchTerm);
+      }
+    }, 500); // بحث بعد 500ms من التوقف عن الكتابة
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, onSearch, currentSearch]);
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setIsSearching(true);
+  };
+
+  const handleClear = () => {
+    setSearchTerm("");
+    onClear();
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="max-w-2xl mx-auto"
+    >
+      <div className="relative">
+        {/* Search Input Container */}
+        <div className="relative flex items-center">
+          {/* Search Icon */}
+          <div className="absolute left-4 text-primary/40">
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </div>
+
+          {/* Search Input */}
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={handleSearchChange}
+            placeholder="Rechercher un produit par nom ou catégorie..."
+            className="w-full pl-12 pr-12 py-4 bg-primary/5 border border-primary/20 rounded-xl focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20 text-primary placeholder-primary/40 transition-all duration-300"
+          />
+
+          {/* Clear Button - Show only when there's text */}
+          {searchTerm && (
+            <motion.button
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0 }}
+              type="button"
+              onClick={handleClear}
+              className="absolute right-4 p-1 hover:bg-primary/10 rounded-full transition-colors"
+              title="Effacer la recherche"
+            >
+              <X size={18} className="text-primary/60" />
+            </motion.button>
+          )}
+
+          {/* Loading Indicator */}
+          {isSearching && (
+            <div className="absolute right-4">
+              <div className="w-5 h-5 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+        </div>
+
+        {/* Search Results Info */}
+        {currentSearch && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-2 flex items-center justify-between text-sm"
+          >
+            <div className="flex items-center space-x-2 text-primary/60">
+              <span>Recherche en cours:</span>
+              <span className="bg-secondary/20 text-secondary px-2 py-1 rounded-full font-semibold">
+                "{currentSearch}"
+              </span>
+            </div>
+            <button
+              onClick={handleClear}
+              className="text-primary/40 hover:text-primary transition-colors text-sm"
+            >
+              Effacer
+            </button>
+          </motion.div>
+        )}
+
+        {/* Search Tips */}
+        <div className="mt-2 flex flex-wrap gap-2 text-xs text-primary/40">
+          <span>💡 Tapez pour rechercher:</span>
+          <span>Nom du produit</span>
+          <span>•</span>
+          <span>Catégorie</span>
+          <span>•</span>
+          <span>Recherche automatique</span>
+        </div>
+      </div>
+    </motion.div>
   );
 };
 

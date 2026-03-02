@@ -30,6 +30,13 @@ export const useProductStore = create((set, get) => ({
     search: "",
   },
 
+  clearSearch: () => {
+    set((state) => ({
+      filters: { ...state.filters, search: "" },
+      pagination: { ...state.pagination, currentPage: 1 },
+    }));
+  },
+
   /* --------------------
      ACTIONS
   ---------------------*/
@@ -128,7 +135,7 @@ export const useProductStore = create((set, get) => ({
     }
   },
 
-  getProductsByCategory: async (category) => {
+  getProductsByCategory: async (category, search = "") => {
     const { filters, pagination } = get();
 
     if (filters.category !== category) {
@@ -147,6 +154,7 @@ export const useProductStore = create((set, get) => ({
         params: {
           page,
           limit: pagination.limit,
+          search: search || undefined,
           gender: filters.gender !== "all" ? filters.gender : undefined,
           maxPrice: filters.maxPrice || undefined,
           sort: filters.sort !== "newest" ? filters.sort : undefined,

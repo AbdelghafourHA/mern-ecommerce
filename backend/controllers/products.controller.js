@@ -21,6 +21,7 @@ export const getAllProducts = async (req, res) => {
       query.$or = [
         { title: { $regex: search, $options: "i" } },
         { category: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
       ];
     }
 
@@ -34,10 +35,14 @@ export const getAllProducts = async (req, res) => {
 
     // Price filter (price OR newPrice)
     if (maxPrice) {
-      query.$or = [
-        { newPrice: { $lte: Number(maxPrice) } },
-        { price: { $lte: Number(maxPrice) } },
-      ];
+      query.$and = query.$and || [];
+
+      query.$and.push({
+        $or: [
+          { newPrice: { $lte: Number(maxPrice) } },
+          { price: { $lte: Number(maxPrice) } },
+        ],
+      });
     }
 
     /* -------------------------
@@ -122,7 +127,7 @@ export const getProductsByCategory = async (req, res) => {
     const limit = Number(req.query.limit) || 12;
     const skip = (page - 1) * limit;
 
-    const { gender, maxPrice, sort } = req.query;
+    const { gender, maxPrice, sort, search } = req.query;
 
     /* -------------------------
        1️⃣ BASE QUERY (CATEGORY FIXED)
@@ -130,13 +135,20 @@ export const getProductsByCategory = async (req, res) => {
     const query = { category };
     const countQuery = { category };
 
-    // تصحيح فلترة الجندر للمصفوفة
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+      ];
+    }
+
     if (gender && gender !== "all") {
-      query.gender = { $in: [gender] }; // استخدام $in للبحث في المصفوفة
+      query.gender = { $in: [gender] };
     }
 
     if (maxPrice) {
       query.$or = [
+        ...(query.$or || []),
         { newPrice: { $lte: Number(maxPrice) } },
         { price: { $lte: Number(maxPrice) } },
       ];
@@ -156,10 +168,9 @@ export const getProductsByCategory = async (req, res) => {
     const totalProducts = await Product.countDocuments(query);
     const globalTotalProducts = await Product.countDocuments(countQuery);
 
-    // تصحيح حساب الـ genderCounts للمصفوفة
     const genderCounts = await Product.aggregate([
       { $match: { category } },
-      { $unwind: "$gender" }, // تفكيك المصفوفة أولاً
+      { $unwind: "$gender" },
       {
         $group: {
           _id: "$gender",

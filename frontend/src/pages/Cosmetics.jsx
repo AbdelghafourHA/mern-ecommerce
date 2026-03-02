@@ -16,7 +16,7 @@ import { useCartStore } from "../stores/useCartStore";
 
 const Cosmetics = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-
+  const [localSearch, setLocalSearch] = useState("");
   const {
     products,
     getProductsByCategory,
@@ -38,15 +38,31 @@ const Cosmetics = () => {
   };
 
   useEffect(() => {
-    getProductsByCategory("Cosmétiques");
-  }, [filters, pagination.currentPage, getProductsByCategory]);
-
-  useEffect(() => {
     setFilter("gender", "all");
     setFilter("maxPrice", null);
     setFilter("sort", "newest");
     goToPage(1);
   }, []);
+
+  useEffect(() => {
+    getProductsByCategory("Cosmétiques", localSearch);
+  }, [
+    filters.gender,
+    filters.maxPrice,
+    filters.sort,
+    pagination.currentPage,
+    localSearch,
+  ]);
+
+  const handleSearch = (searchTerm) => {
+    setLocalSearch(searchTerm);
+    goToPage(1);
+  };
+
+  const handleClearSearch = () => {
+    setLocalSearch("");
+    goToPage(1);
+  };
 
   const calculateFinalPrice = (product) => {
     if (product.fixedDiscount > 0) {
@@ -87,6 +103,7 @@ const Cosmetics = () => {
     setFilter("maxPrice", null);
     setFilter("sort", "newest");
     goToPage(1);
+    setLocalSearch("");
   };
 
   const containerVariants = {
@@ -159,6 +176,20 @@ const Cosmetics = () => {
           ))}
         </motion.div>
 
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.35 }}
+          className="max-w-2xl mx-auto mb-8 px-4"
+        >
+          <SearchPanel
+            onSearch={handleSearch}
+            currentSearch={localSearch}
+            onClear={handleClearSearch}
+            placeholder="Rechercher un cosmétique par nom ou marque..."
+          />
+        </motion.div>
+
         {/* Filter Button Row */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
@@ -199,6 +230,17 @@ const Cosmetics = () => {
               {pagination.totalProducts} cosmétique
               {pagination.totalProducts > 1 ? "s" : ""} trouvé
               {pagination.totalProducts > 1 ? "s" : ""}
+              {/* عرض مصطلح البحث إذا كان موجوداً */}
+              {localSearch && (
+                <>
+                  {" "}
+                  • Recherche:{" "}
+                  <span className="text-secondary font-semibold">
+                    "{localSearch}"
+                  </span>
+                </>
+              )}
+              {/* باقي الفلاتر */}
               {filters.gender !== "all" &&
                 ` • ${
                   filters.gender === "femme"
@@ -414,12 +456,16 @@ const Cosmetics = () => {
             animate={{ opacity: 1, scale: 1 }}
             className="text-center py-20"
           >
-            <div className="text-6xl mb-4">🔍</div>
+            <div className="text-6xl mb-4">{localSearch ? "🔍" : "💄"}</div>
             <h3 className="text-xl sm:text-2xl font-bold text-primary mb-2">
-              Aucun cosmétique trouvé
+              {localSearch
+                ? "Aucun cosmétique trouvé"
+                : "Aucun cosmétique disponible"}
             </h3>
             <p className="text-primary/80 mb-6 text-sm sm:text-base">
-              Essayez d'ajuster vos filtres
+              {localSearch
+                ? `Désolé, aucun cosmétique ne correspond à "${localSearch}"`
+                : "Essayez d'ajuster vos filtres"}
             </p>
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -427,7 +473,9 @@ const Cosmetics = () => {
               onClick={resetFilters}
               className="bg-accent text-primary px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 text-sm sm:text-base"
             >
-              Réinitialiser les filtres
+              {localSearch
+                ? "Voir tous les cosmétiques"
+                : "Réinitialiser les filtres"}
             </motion.button>
           </motion.div>
         )}
@@ -745,6 +793,141 @@ const FilterSidebar = ({ isOpen, onClose, genders, formatPrice }) => {
         </>
       )}
     </AnimatePresence>
+  );
+};
+
+const SearchPanel = ({
+  onSearch,
+  currentSearch,
+  onClear,
+  placeholder = "Rechercher un produit...",
+}) => {
+  const [searchTerm, setSearchTerm] = useState(currentSearch || "");
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm !== currentSearch) {
+        setIsSearching(false);
+        onSearch(searchTerm);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, onSearch, currentSearch]);
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setIsSearching(true);
+  };
+
+  const handleClear = () => {
+    setSearchTerm("");
+    onClear();
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="w-full"
+    >
+      <div className="relative">
+        {/* Search Input Container */}
+        <div className="relative flex items-center">
+          {/* Search Icon */}
+          <div className="absolute left-4 text-primary/40">
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </div>
+
+          {/* Search Input */}
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={handleSearchChange}
+            placeholder={placeholder}
+            className="w-full pl-12 pr-12 py-4 bg-primary/5 border border-primary/20 rounded-xl focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20 text-primary placeholder-primary/40 transition-all duration-300"
+          />
+
+          {/* Clear Button or Loading Indicator */}
+          <AnimatePresence mode="wait">
+            {isSearching ? (
+              <motion.div
+                key="loading"
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.5 }}
+                className="absolute right-4"
+              >
+                <div className="w-5 h-5 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
+              </motion.div>
+            ) : (
+              searchTerm && (
+                <motion.button
+                  key="clear"
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.5 }}
+                  type="button"
+                  onClick={handleClear}
+                  className="absolute right-4 p-1 hover:bg-primary/10 rounded-full transition-colors"
+                  title="Effacer la recherche"
+                >
+                  <X size={18} className="text-primary/60" />
+                </motion.button>
+              )
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Search Results Info */}
+        <AnimatePresence>
+          {currentSearch && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mt-2 flex items-center justify-between text-sm"
+            >
+              <div className="flex items-center space-x-2 text-primary/60">
+                <span>Recherche:</span>
+                <span className="bg-secondary/20 text-secondary px-2 py-1 rounded-full font-semibold">
+                  "{currentSearch}"
+                </span>
+              </div>
+              <button
+                onClick={handleClear}
+                className="text-primary/40 hover:text-primary transition-colors text-sm"
+              >
+                Effacer
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div className="hidden sm:flex mt-2 flex-wrap gap-2 text-xs text-primary/40">
+          <span>💡 Tapez pour rechercher:</span>
+          <span>Nom du parfum</span>
+          <span>•</span>
+          <span>Marque</span>
+          <span>•</span>
+          <span>Recherche automatique</span>
+        </div>
+      </div>
+    </motion.div>
   );
 };
 
